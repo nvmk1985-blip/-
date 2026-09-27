@@ -41,7 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -82,8 +82,9 @@ fun LessonsScreen(
     val practiceResult by viewModel.lastPracticeResult.collectAsState()
 
     val tabs = listOf(
-        "Conversations" to "பாடங்கள்",
-        "Roleplay" to "சூழ்நிலைகள்",
+        "Adi's Book" to "நூல் பயிற்சி",
+        "Phrases" to "வாக்கியம்",
+        "Roleplay" to "உரையாடல்",
         "Grammar" to "இலக்கணம்",
         "Mistakes" to "தவறுகள்"
     )
@@ -93,9 +94,10 @@ fun LessonsScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        PrimaryTabRow(
+        PrimaryScrollableTabRow(
             selectedTabIndex = selectedTab,
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface,
+            edgePadding = 8.dp
         ) {
             tabs.forEachIndexed { index, (en, ta) ->
                 Tab(
@@ -103,8 +105,20 @@ fun LessonsScreen(
                     onClick = { selectedTab = index },
                     text = {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = en, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            Text(text = ta, fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
+                            Text(
+                                text = en,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                            Text(
+                                text = ta,
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.outline,
+                                maxLines = 1,
+                                softWrap = false
+                            )
                         }
                     }
                 )
@@ -112,20 +126,24 @@ fun LessonsScreen(
         }
 
         when (selectedTab) {
-            0 -> ConversationsTab(
+            0 -> BookCourseTab(
+                viewModel = viewModel,
+                onStartRoleplay = onStartRoleplay
+            )
+            1 -> ConversationsTab(
                 viewModel = viewModel,
                 selectedCategory = selectedCategory,
                 savedPhrases = savedPhrases.map { it.englishText }.toSet(),
                 onSelectCategory = { viewModel.selectCategory(it) }
             )
-            1 -> RoleplayTab(
+            2 -> RoleplayTab(
                 onStartScenario = { scenario ->
                     viewModel.startScenario(scenario)
                     onStartRoleplay(scenario)
                 }
             )
-            2 -> GrammarTab(viewModel = viewModel)
-            3 -> MistakesTab(viewModel = viewModel)
+            3 -> GrammarTab(viewModel = viewModel)
+            4 -> MistakesTab(viewModel = viewModel)
         }
     }
 }
@@ -298,9 +316,9 @@ fun ConversationsTab(
                         }
                     }
 
-                    // Pronunciation (Tanglish)
+                    // Pronunciation (in Tamil script)
                     Text(
-                        text = "🗣️ " + phrase.tanglish,
+                        text = "🗣️ உச்சரிப்பு: " + phrase.tanglish,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium
@@ -407,7 +425,7 @@ fun RoleplayTab(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "உண்மையான சூழ்நிலைகளில் மலருடன் ஆடியோவில் பேசி பழகுங்கள்",
+                text = "உண்மையான சூழ்நிலைகளில் தனம் டீச்சருடன் சுபி ஆடியோவில் பேசிப் பழகலாம்",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.outline
             )
@@ -440,12 +458,12 @@ fun RoleplayTab(
                     ) {
                         Column(modifier = Modifier.padding(10.dp)) {
                             Text(
-                                text = "🤖 மலரின் பாத்திரம்: ${scenario.botRole}",
+                                text = "👩‍🏫 தனம் டீச்சரின் பாத்திரம்: ${scenario.botRole}",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "👤 உங்கள் பாத்திரம்: ${scenario.userRole}",
+                                text = "👧 சுபிக்சா (சுபி) பாத்திரம்: ${scenario.userRole}",
                                 fontSize = 12.sp
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -464,7 +482,7 @@ fun RoleplayTab(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "Start Conversation with Malar (உரையாடலை தொடங்கு)")
+                        Text(text = "Start Conversation with Dhanam (தனம் டீச்சருடன் பேசு)")
                     }
                 }
             }

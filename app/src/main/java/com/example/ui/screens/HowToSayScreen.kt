@@ -318,10 +318,11 @@ fun StyleResultCard(
                     }
                 }
             }
-            if (tanglish.isNotBlank()) {
+            val tamilPronunciation = com.example.data.ai.TutorEngine.formatPronunciationInTamil(phrase, tanglish)
+            if (tamilPronunciation.isNotBlank()) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "🗣️ " + tanglish,
+                    text = "🗣️ உச்சரிப்பு: $tamilPronunciation",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium

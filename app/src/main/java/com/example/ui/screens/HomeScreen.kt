@@ -114,7 +114,7 @@ fun HomeScreen(
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
-                                        text = "வணக்கம்! மலர் பேசுகிறேன்",
+                                        text = "👩‍🏫 தனம் டீச்சர் • மாணவி: சுபிக்சா (சுபி, 9 வயது)",
                                         color = Color.White,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
@@ -123,15 +123,15 @@ fun HomeScreen(
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "Speak English Freely,\nLearn via Tamil!",
+                                    text = "Hi Subiksha (Subi)! 🌟\nLearn with Dhanam Teacher",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                                 Text(
-                                    text = "தமிழ் வழியே சுலபமாக ஆங்கிலம் பேசுங்கள்",
+                                    text = "சுபி பாப்பாவுக்காக தமிழ் வழியே எளிய ஆங்கிலப் பயிற்சி",
                                     fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                                 )
                             }
 
@@ -145,7 +145,7 @@ fun HomeScreen(
                             ) {
                                 Image(
                                     painter = painterResource(id = R.drawable.ic_app_foreground_1790321107787),
-                                    contentDescription = "Malar AI Companion",
+                                    contentDescription = "Dhanam Teacher AI Companion",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -175,7 +175,7 @@ fun HomeScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Live Call", fontWeight = FontWeight.Bold)
+                                Text("Call Dhanam", fontWeight = FontWeight.Bold)
                             }
 
                             Button(
@@ -191,10 +191,77 @@ fun HomeScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Chat Bot", fontWeight = FontWeight.Bold)
+                                Text("Ask Dhanam", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // Subiksha (Subi, Age 9) Personal Self-Introduction Card with Audio
+        item {
+            val subiIntroEn = "Hello! My name is Subiksha, and you can call me Subi. I am a 9-year-old girl. My English teacher's name is Dhanam!"
+            val subiIntroTa = "வணக்கம்! என் பெயர் சுபிக்சா, என்னை சுபி என்று அழைக்கலாம். நான் 9 வயது சிறுமி. என் ஆங்கில டீச்சர் பெயர் தனம்!"
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.75f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("subi_profile_card")
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "👧 சுபிக்சா (சுபி, 9 வயது) - சுய அறிமுகம்",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.clickable {
+                                    viewModel.voiceManager.speakBilingual(subiIntroEn, subiIntroTa)
+                                }
+                            ) {
+                                Text(
+                                    text = "🔊 கேள் (Listen)",
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = subiIntroEn,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "🗣️ உச்சரிப்பு: ஹலோ! மை நேம் இஸ் சுபிக்சா, அண்ட் யூ கேன் கால் மீ சுபி. ஐ அம் எ நைன் இயர் ஓல்ட் கேர்ள். மை இங்கிலீஷ் டீச்சர்ஸ் நேம் இஸ் தனம்!",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "🇮🇳 $subiIntroTa",
+                        fontSize = 12.5.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.9f)
+                    )
                 }
             }
         }
@@ -247,6 +314,61 @@ fun HomeScreen(
         }
 
         // "How to say in English?" Instant helper banner
+        // Adi's Book Featured Course Card
+        item {
+            Card(
+                onClick = onNavigateToLessons,
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("adis_book_course_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(46.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = "Adi's Book Course",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Adi's Book: Spoken Tamil & English 📖",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "62 பாடங்கள் • 12 உரையாடல்கள் • 6 நீதிக்கதைகள் • இலக்கணம் (ஆடியோவுடன் பயில)",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Open Adi's Book Course",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+        }
+
         item {
             Card(
                 onClick = onNavigateToHowToSay,

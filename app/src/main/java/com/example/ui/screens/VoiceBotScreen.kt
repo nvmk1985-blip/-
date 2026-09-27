@@ -177,7 +177,7 @@ fun VoiceBotScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Malar (மலர்) - Voice Tutor",
+                                text = "Dhanam Teacher (தனம்) • Subi (சுபி, 9y)",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp
                             )
@@ -185,11 +185,11 @@ fun VoiceBotScreen(
                         Text(
                             text = if (isSpeaking) {
                                 if (currentlySpeakingLang == CurrentlySpeakingLanguage.TAMIL) {
-                                    "🔊 மலர் தமிழில் பேசுகிறார் (Speaking Tamil)..."
+                                    "🔊 தனம் டீச்சர் தமிழில் பேசுகிறார் (Speaking Tamil)..."
                                 } else {
-                                    "🔊 Speaking in English..."
+                                    "🔊 Dhanam Teacher is speaking in English..."
                                 }
-                            } else if (isListening) "Listening to you..." else "Ready to converse",
+                            } else if (isListening) "Listening to Subi (சுபி பேசுகிறார்)..." else "Ready to teach Subiksha (Subi)",
                             fontSize = 11.sp,
                             color = if (isSpeaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                         )
@@ -377,7 +377,7 @@ fun VoiceBotScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "மலர் பதிலளிக்கிறார் (Thinking in English & Tamil)...",
+                            text = "தனம் டீச்சர் சுபிக்கு பதிலளிக்கிறார் (Thinking)...",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -449,7 +449,7 @@ fun VoiceBotScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (currentlySpeakingLang == CurrentlySpeakingLanguage.TAMIL) "🔊 மலர் தமிழில் விளக்குகிறார்..." else "🔊 Malar is speaking in English...",
+                            text = if (currentlySpeakingLang == CurrentlySpeakingLanguage.TAMIL) "🔊 தனம் டீச்சர் தமிழில் விளக்குகிறார்..." else "🔊 Dhanam Teacher is speaking in English...",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -605,7 +605,7 @@ fun VoiceBotScreen(
                         ) {
                             Icon(
                                 imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
-                                contentDescription = if (isListening) "Stop Listening" else "Speak with Malar",
+                                contentDescription = if (isListening) "Stop Listening" else "Speak with Dhanam Teacher",
                                 modifier = Modifier.size(26.dp)
                             )
                         }
@@ -696,11 +696,15 @@ fun ChatMessageItem(
                         onStop = onStop
                     )
 
-                    // Tanglish pronunciation guide if present
-                    if (message.tanglishText.isNotBlank()) {
+                    // Tamil-script pronunciation guide for the English sentence
+                    val tamilPronunciation = com.example.data.ai.TutorEngine.formatPronunciationInTamil(
+                        message.englishText,
+                        message.tanglishText
+                    )
+                    if (tamilPronunciation.isNotBlank()) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "🗣️ " + message.tanglishText,
+                            text = "🗣️ உச்சரிப்பு: $tamilPronunciation",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Medium

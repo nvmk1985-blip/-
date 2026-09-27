@@ -157,15 +157,15 @@ fun VoiceCallScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Malar (மலர்)",
+                text = "Dhanam Teacher (தனம்)",
                 color = Color.White,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Spoken English Voice Tutor",
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 14.sp
+                text = "Student: Subiksha (Subi, Age 9) • சுபிக்சா (சுபி)",
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 13.5.sp
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -211,7 +211,7 @@ fun VoiceCallScreen(
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_app_foreground_1790321107787),
-                        contentDescription = "Malar AI voice tutor",
+                        contentDescription = "Dhanam Teacher AI voice tutor",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -234,18 +234,18 @@ fun VoiceCallScreen(
             // Call Status text with real-time speech feedback
             Text(
                 text = if (isBotThinking) {
-                    "மலர் யோசிக்கிறார்... (Thinking)"
+                    "தனம் டீச்சர் யோசிக்கிறார்... (Thinking)"
                 } else if (isSpeaking) {
                     if (currentlySpeakingLang == CurrentlySpeakingLanguage.TAMIL) {
-                        "🔊 மலர் தமிழில் விளக்குகிறார் (Speaking Tamil)..."
+                        "🔊 தனம் டீச்சர் தமிழில் விளக்குகிறார் (Speaking Tamil)..."
                     } else {
-                        "🔊 Malar is speaking in English..."
+                        "🔊 Dhanam Teacher is speaking in English..."
                     }
                 } else if (isListening) {
                     if (partialSpeechText.isNotBlank()) {
                         "🎤 \"$partialSpeechText\""
                     } else {
-                        "🎤 நீங்கள் பேசலாம் (${selectedSttLanguage.labelTamil} / ${selectedSttLanguage.label})..."
+                        "🎤 சுபி பேசலாம் (${selectedSttLanguage.labelTamil} / ${selectedSttLanguage.label})..."
                     }
                 } else {
                     callStatus
@@ -320,10 +320,10 @@ fun VoiceCallScreen(
         ) {
             // Quick suggested conversation prompts
             val suggestedPrompts = listOf(
-                "Hello Malar!",
-                "How to order tea in English?",
-                "Can we practice job interview?",
-                "சாப்பிட்டீங்களா?"
+                "Hello Dhanam Teacher!",
+                "My name is Subiksha (Subi), I am 9 years old",
+                "Teach me a story, Dhanam Teacher",
+                "வணக்கம் தனம் டீச்சர்!"
             )
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

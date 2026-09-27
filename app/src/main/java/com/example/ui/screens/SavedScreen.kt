@@ -146,10 +146,14 @@ fun SavedScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
-                            if (item.tanglishText.isNotBlank()) {
+                            val tamilPronunciation = com.example.data.ai.TutorEngine.formatPronunciationInTamil(
+                                item.englishText,
+                                item.tanglishText
+                            )
+                            if (tamilPronunciation.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "🗣️ " + item.tanglishText,
+                                    text = "🗣️ உச்சரிப்பு: $tamilPronunciation",
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Medium

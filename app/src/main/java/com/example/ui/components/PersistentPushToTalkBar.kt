@@ -456,7 +456,7 @@ fun PersistentPushToTalkButton(
                     contentDescription = if (isListening) {
                         "Active Recording - Release or tap to stop"
                     } else {
-                        "Push to Talk with Malar"
+                        "Push to Talk with Dhanam Teacher"
                     },
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)

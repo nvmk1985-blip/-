@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -59,7 +61,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isCallActive = MutableStateFlow(false)
     val isCallActive: StateFlow<Boolean> = _isCallActive.asStateFlow()
 
-    private val _callStatus = MutableStateFlow("Tap mic to speak with Malar")
+    private val _callStatus = MutableStateFlow("Tap mic to speak with Dhanam Teacher")
     val callStatus: StateFlow<String> = _callStatus.asStateFlow()
 
     // Interactive practice
@@ -91,9 +93,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         savedPhrases = repository.savedPhrases.stateIn(
             viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
         )
-        chatHistory = repository.chatMessages.stateIn(
-            viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
-        )
+        chatHistory = repository.chatMessages
+            .map { list ->
+                list.map { msg ->
+                    msg.copy(
+                        englishText = msg.englishText
+                            .replace("I am Malar, your English voice companion", "Hi Subiksha (Subi)! I am Dhanam, your English & Tamil Teacher")
+                            .replace("Malar", "Dhanam"),
+                        tamilText = msg.tamilText
+                            .replace("நான் மலர், உங்களின் ஆங்கில பேச்சுத் தோழி", "நான் உன் தனம் டீச்சர்! என் 9 வயது சுட்டி மாணவி சுபிக்சா (சுபி)")
+                            .replace("மலர்", "தனம்"),
+                        tanglishText = msg.tanglishText
+                            .replace("மலர்", "தனம்")
+                            .replace("Malar", "Dhanam", ignoreCase = true)
+                    )
+                }
+            }
+            .stateIn(
+                viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+            )
         stats = repository.practiceStats.stateIn(
             viewModelScope, SharingStarted.WhileSubscribed(5000), PracticeStatEntity()
         )
@@ -113,13 +131,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         voiceManager.onSpeechError = { errorMsg ->
             if (_isCallActive.value) {
-                _callStatus.value = "கவனிக்க இயலவில்லை ($errorMsg). மீண்டும் பேசவும்."
+                _callStatus.value = "சுபி, கவனிக்க இயலவில்லை ($errorMsg). மீண்டும் பேசு!"
             }
         }
 
         voiceManager.onSpeakingComplete = {
             if (_isCallActive.value) {
-                _callStatus.value = "உங்கள் முறை! பேச தொடங்குங்கள்..."
+                _callStatus.value = "சுபியின் முறை! இப்போது பேசு சுபி..."
                 voiceManager.startListening(voiceManager.selectedSttLanguage.value.code)
             }
         }
@@ -144,13 +162,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun seedInitialGreetingIfNeeded() {
         viewModelScope.launch {
-            if (chatHistory.value.isEmpty()) {
+            val currentMessages = repository.chatMessages.first()
+            val hasOldMalarGreeting = currentMessages.size == 1 &&
+                (currentMessages.first().englishText.contains("Malar", ignoreCase = true) ||
+                    currentMessages.first().tamilText.contains("மலர்"))
+
+            if (currentMessages.isEmpty() || hasOldMalarGreeting) {
+                if (hasOldMalarGreeting) {
+                    repository.clearChat()
+                }
                 val greeting = ChatMessageEntity(
                     sender = "bot",
-                    englishText = "Vanakkam! I am Malar, your English voice companion. Ask me anything or speak to me in Tamil or English!",
-                    tamilText = "வணக்கம்! நான் மலர், உங்களின் ஆங்கில பேச்சுத் தோழன். என்னுடன் தைரியமாக தமிழில் அல்லது ஆங்கிலத்தில் பேசுங்கள்!",
-                    tanglishText = "Vanakkam! Ai am Malar, yor Inglish vois kampaanyan.",
-                    coachingTip = "தவறுகளை பற்றி தயங்காமல் பேசுங்கள். நாம் பேச பேசவே ஆங்கிலம் வசப்படும்!"
+                    englishText = "Hello Subiksha (Subi)! I am your Dhanam Teacher. You are a smart 9-year-old girl! Speak to me in Tamil or English anytime!",
+                    tamilText = "வணக்கம் சுபிக்சா (சுபி)! நான் உன் தனம் டீச்சர். என் 9 வயது சுட்டி மாணவி சுபி, என்னுடன் தயங்காமல் தமிழில் அல்லது ஆங்கிலத்தில் பேசு!",
+                    tanglishText = "ஹலோ சுபிக்சா (சுபி)! ஐ அம் யுவர் தனம் டீச்சர். யூ ஆர் எ ஸ்மார்ட் நைன் இயர் ஓல்ட் கேர்ள்!",
+                    coachingTip = "சுபி செல்லம், தவறுகளைப் பற்றி தயங்காமல் பேசு. தனம் டீச்சருடன் தினமும் பேசப் பேச ஆங்கிலம் சுலபமாக வரும்!"
                 )
                 repository.addChatMessage(greeting)
             }
@@ -219,7 +245,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 englishText = scenario.starterMessage,
                 tamilText = scenario.starterTamil,
                 tanglishText = "",
-                coachingTip = "சூழ்நிலை: ${scenario.titleTamil}. உங்களின் உரையாடலை தொடங்கவும்!"
+                coachingTip = "சூழ்நிலை: ${scenario.titleTamil}. சுபி, தனம் டீச்சருடன் உரையாடலைத் தொடங்கு!"
             )
             repository.addChatMessage(scenarioGreeting)
             voiceManager.speakBotResponse(
@@ -236,11 +262,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Live Call Mode
     fun startCallMode() {
         _isCallActive.value = true
-        _callStatus.value = "மலர் இணைப்பில் உள்ளார்... வணக்கம் சொல்லுங்கள்!"
+        _callStatus.value = "தனம் டீச்சர் இணைப்பில் உள்ளார்... வணக்கம் சொல்லு சுபி!"
         val (welcomeEng, welcomeTam) = if (_activeScenario.value != null) {
             _activeScenario.value!!.starterMessage to _activeScenario.value!!.starterTamil
         } else {
-            "Hello! I am ready to talk with you. What would you like to speak about?" to "வணக்கம்! என்னுடன் பேச தயாராக உள்ளேன். எதைப் பற்றி பேசலாம்?"
+            "Hello Subiksha (Subi)! Dhanam Teacher is ready to talk with you. How are you today, Subi?" to "வணக்கம் சுபிக்சா (சுபி)! தனம் டீச்சர் உன்னுடன் பேசத் தயாராக இருக்கிறேன். சுபி இன்று எப்படி இருக்கிறாய்?"
         }
         voiceManager.speakBotResponse(welcomeEng, welcomeTam)
     }
@@ -254,7 +280,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun handleUserVoiceInputInCall(text: String) {
         viewModelScope.launch {
-            _callStatus.value = "நீங்கள் பேசியது: \"$text\""
+            _callStatus.value = "சுபி பேசியது: \"$text\""
             _isBotThinking.value = true
 
             val reply = TutorEngine.getTutorReply(text, _activeScenario.value?.id)
@@ -270,7 +296,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.addChatMessage(botMsg)
 
             _isBotThinking.value = false
-            _callStatus.value = "மலர் பதிலளிக்கிறார்..."
+            _callStatus.value = "தனம் டீச்சர் பதிலளிக்கிறார்..."
             voiceManager.speakBotResponse(
                 englishText = reply.englishText,
                 tamilText = reply.tamilText
@@ -282,10 +308,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun evaluateSpeakingPractice(targetPhrase: String, spokenPhrase: String) {
         val score = TutorEngine.calculatePronunciationScore(targetPhrase, spokenPhrase)
         val feedback = when {
-            score >= 90 -> "அற்புதம்! மிக துல்லியமாக உச்சரித்தீர்கள் (Excellent native pronunciation)!"
-            score >= 75 -> "மிக நன்று! மேலும் ஒரு முறை கேட்டு சொல்லிப் பாருங்கள் (Good job, keep it up)!"
-            score >= 50 -> "நல்ல முயற்சி! மெதுவாக ஒவ்வொரு வார்த்தையையும் உச்சரிக்கவும்."
-            else -> "கவலை வேண்டாம்! மீண்டும் ஆடியோவை கேட்டு மெதுவாக முயற்சி செய்யுங்கள்."
+            score >= 90 -> "சூப்பர் சுபி (Subiksha)! மிகத் துல்லியமாக உச்சரித்தாய் — தனம் டீச்சரின் பாராட்டுகள்! 🌟"
+            score >= 75 -> "மிக நன்று சுபி! இன்னும் ஒரு முறை கேட்டுச் சொல்லிப் பார்! 👏"
+            score >= 50 -> "நல்ல முயற்சி சுபி! மெதுவாக ஒவ்வொரு வார்த்தையையும் உச்சரித்துப் பார்."
+            else -> "கவலை வேண்டாம் சுபி செல்லம்! மீண்டும் ஆடியோவைக் கேட்டு மெதுவாக முயற்சி செய்."
         }
         _lastPracticeResult.value = PracticeResult(
             targetText = targetPhrase,
