@@ -1,0 +1,6 @@
+{
+  "name": "Pesalam AI",
+  "description": "Tamil-English voice bot companion for learning spoken English through Tamil teachings, voice roleplay, pronunciation practice, and daily conversations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
