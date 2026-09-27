@@ -119,13 +119,13 @@ fun TtsModeSelector(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                 contentDescription = "Voice mode",
-                modifier = Modifier.size(15.dp),
+                modifier = Modifier.size(14.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             TtsMode.values().forEach { mode ->
@@ -135,11 +135,13 @@ fun TtsModeSelector(
                         .clip(RoundedCornerShape(12.dp))
                         .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .clickable { onModeChange(mode) }
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = mode.label,
-                        fontSize = 11.sp,
+                        fontSize = 10.5.sp,
+                        maxLines = 1,
+                        softWrap = false,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.testTag("tts_mode_${mode.name}")
@@ -326,20 +328,20 @@ fun SpeechRateChip(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Speed,
                 contentDescription = "Audio speed",
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(14.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            val rates = listOf(0.75f to "0.75x (Slow)", 0.9f to "0.9x", 1.0f to "1.0x")
+            val rates = listOf(0.75f to "0.75x", 0.9f to "0.9x", 1.0f to "1.0x")
             rates.forEach { (rate, label) ->
                 val isSelected = kotlin.math.abs(currentRate - rate) < 0.05f
                 Box(
                     modifier = Modifier
-                        .padding(horizontal = 2.dp)
+                        .padding(horizontal = 1.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .clickable { onRateChange(rate) }
@@ -347,7 +349,9 @@ fun SpeechRateChip(
                 ) {
                     Text(
                         text = label,
-                        fontSize = 11.sp,
+                        fontSize = 10.5.sp,
+                        maxLines = 1,
+                        softWrap = false,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                         color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.testTag("speed_chip_$label")

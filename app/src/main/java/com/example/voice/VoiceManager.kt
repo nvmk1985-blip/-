@@ -16,9 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
 
 enum class TtsMode(val label: String, val labelTamil: String) {
-    BILINGUAL("English + தமிழ்", "இரு மொழிகளிலும்"),
-    ENGLISH_ONLY("English Only", "ஆங்கிலம் மட்டும்"),
-    TAMIL_ONLY("Tamil Only", "தமிழ் மட்டும்")
+    BILINGUAL("Eng + தமிழ்", "இரு மொழிகளிலும்"),
+    ENGLISH_ONLY("English", "ஆங்கிலம் மட்டும்"),
+    TAMIL_ONLY("தமிழ்", "தமிழ் மட்டும்")
 }
 
 enum class CurrentlySpeakingLanguage {
@@ -78,6 +78,15 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
     // Chained bilingual speech state
     private var pendingTamilUtterance: String? = null
     private var pendingMessageId: Long? = null
+    private var chainedTamilRunnable: Runnable? = null
+    private var speakingWatchdogRunnable: Runnable? = null
+    private var pendingInitSpeakAction: (() -> Unit)? = null
+
+    // SpeechRecognizer session management to prevent stale ERROR_CLIENT / BUSY callbacks
+    private var isManuallyStoppedOrCancelled = false
+    private var autoRetryCount = 0
+    private var lastRequestedLanguageCode: String = SttLanguage.ENGLISH.code
+    private var startListeningRunnable: Runnable? = null
 
     // Scoped ephemeral STT callbacks (for single-purpose drills like practice/pronunciation)
     private var scopedOnResult: ((String) -> Unit)? = null
@@ -88,8 +97,10 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
     var onSpeakingComplete: (() -> Unit)? = null
 
     init {
-        initializeTts()
-        initializeRecognizer()
+        mainHandler.post {
+            initializeTts()
+            initializeRecognizer()
+        }
     }
 
     fun setSttLanguage(language: SttLanguage) {
@@ -101,31 +112,75 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
     }
 
     private fun initializeTts() {
-        textToSpeech = TextToSpeech(context.applicationContext, this)
+        try {
+            textToSpeech = TextToSpeech(context.applicationContext, this)
+        } catch (_: Exception) {}
     }
 
-    private fun initializeRecognizer() {
+    private fun recreateRecognizerOnMainThread() {
+        try {
+            speechRecognizer?.setRecognitionListener(null)
+            speechRecognizer?.cancel()
+            speechRecognizer?.destroy()
+        } catch (_: Exception) {}
+        speechRecognizer = null
+
         try {
             if (SpeechRecognizer.isRecognitionAvailable(context)) {
-                speechRecognizer?.destroy()
-                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context.applicationContext).apply {
                     setRecognitionListener(this@VoiceManager)
                 }
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+            try {
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
+                    setRecognitionListener(this@VoiceManager)
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    private fun initializeRecognizer() {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            recreateRecognizerOnMainThread()
+        } else {
+            mainHandler.post { recreateRecognizerOnMainThread() }
+        }
     }
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             isTtsInitialized = true
             configureTtsLocalesAndListener()
+            pendingInitSpeakAction?.invoke()
+            pendingInitSpeakAction = null
         }
+    }
+
+    private fun scheduleSpeakingWatchdog(textLength: Int) {
+        speakingWatchdogRunnable?.let { mainHandler.removeCallbacks(it) }
+        val timeoutMs = (3500L + textLength * 110L).coerceIn(4500L, 18000L)
+        val runnable = Runnable {
+            if (_isSpeaking.value) {
+                _isSpeaking.value = false
+                _currentlySpeakingLang.value = CurrentlySpeakingLanguage.NONE
+                _currentPlayingMessageId.value = null
+                pendingTamilUtterance = null
+                pendingMessageId = null
+            }
+        }
+        speakingWatchdogRunnable = runnable
+        mainHandler.postDelayed(runnable, timeoutMs)
+    }
+
+    private fun cancelSpeakingWatchdog() {
+        speakingWatchdogRunnable?.let { mainHandler.removeCallbacks(it) }
+        speakingWatchdogRunnable = null
     }
 
     private fun configureTtsLocalesAndListener() {
         val tts = textToSpeech ?: return
 
-        // Check Tamil availability
         val taLocale = Locale.forLanguageTag("ta-IN")
         val taGeneric = Locale.forLanguageTag("ta")
         val taStatus = try {
@@ -137,7 +192,6 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
 
         _isTamilTtsAvailable.value = (taStatus >= TextToSpeech.LANG_AVAILABLE)
 
-        // Default to Indian English
         val enLocale = Locale.forLanguageTag("en-IN")
         val enStatus = try {
             tts.isLanguageAvailable(enLocale)
@@ -172,13 +226,15 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
 
             override fun onDone(utteranceId: String?) {
                 mainHandler.post {
-                    if (utteranceId?.startsWith("bilingual_en_") == true && !pendingTamilUtterance.isNullOrBlank()) {
-                        // English finished, now speak the pending Tamil explanation after a natural pause
-                        val tamilText = pendingTamilUtterance ?: ""
+                    cancelSpeakingWatchdog()
+                    val tamilText = pendingTamilUtterance
+                    if (utteranceId?.startsWith("bilingual_en_") == true && !tamilText.isNullOrBlank() && _isTamilTtsAvailable.value) {
                         pendingTamilUtterance = null
-                        mainHandler.postDelayed({
+                        val runnable = Runnable {
                             speakTamilInternal(tamilText, isChained = true, msgId = pendingMessageId)
-                        }, 350)
+                        }
+                        chainedTamilRunnable = runnable
+                        mainHandler.postDelayed(runnable, 280)
                     } else {
                         _isSpeaking.value = false
                         _currentlySpeakingLang.value = CurrentlySpeakingLanguage.NONE
@@ -190,8 +246,18 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
                 }
             }
 
+            @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String?) {
+                handleTtsError()
+            }
+
+            override fun onError(utteranceId: String?, errorCode: Int) {
+                handleTtsError()
+            }
+
+            private fun handleTtsError() {
                 mainHandler.post {
+                    cancelSpeakingWatchdog()
                     _isSpeaking.value = false
                     _currentlySpeakingLang.value = CurrentlySpeakingLanguage.NONE
                     _currentPlayingMessageId.value = null
@@ -213,22 +279,24 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
 
     private fun cleanTextForSpeech(text: String): String {
         return text
-            .replace(Regex("[\\p{So}\\p{Cn}\\p{Cs}]"), "") // remove emojis & symbols
-            .replace(Regex("[*#_~`|]"), " ") // remove markdown characters
+            .replace(Regex("[\\p{So}\\p{Cn}\\p{Cs}]"), "")
+            .replace(Regex("[*#_~`|]"), " ")
             .replace(Regex("\\s+"), " ")
             .trim()
     }
 
-    /**
-     * Reads a full bot response according to the currently active TTS mode
-     * or the explicitly provided mode.
-     */
     fun speakBotResponse(
         englishText: String,
         tamilText: String,
         mode: TtsMode = _ttsMode.value,
         messageId: Long? = null
     ) {
+        if (!isTtsInitialized) {
+            pendingInitSpeakAction = {
+                speakBotResponse(englishText, tamilText, mode, messageId)
+            }
+            return
+        }
         when (mode) {
             TtsMode.BILINGUAL -> speakBilingual(englishText, tamilText, messageId)
             TtsMode.ENGLISH_ONLY -> speakEnglish(englishText, messageId)
@@ -236,9 +304,6 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
         }
     }
 
-    /**
-     * Speaks English text first, then automatically chains and speaks the Tamil explanation.
-     */
     fun speakBilingual(englishText: String, tamilText: String, messageId: Long? = null) {
         val cleanEng = cleanTextForSpeech(englishText)
         val cleanTam = cleanTextForSpeech(tamilText)
@@ -253,11 +318,11 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
         }
         if (cleanEng.isBlank() && cleanTam.isBlank()) return
 
-        stopListening()
+        cancelListening()
         stopSpeaking()
 
         _currentPlayingMessageId.value = messageId
-        pendingTamilUtterance = cleanTam
+        pendingTamilUtterance = if (_isTamilTtsAvailable.value) cleanTam else null
         pendingMessageId = messageId
 
         val tts = textToSpeech ?: return
@@ -272,17 +337,21 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
         val params = Bundle()
         val utteranceId = "bilingual_en_${System.currentTimeMillis()}"
         params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
-        tts.speak(cleanEng, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+        _isSpeaking.value = true
+        _currentlySpeakingLang.value = CurrentlySpeakingLanguage.ENGLISH
+        scheduleSpeakingWatchdog(cleanEng.length)
+
+        val result = tts.speak(cleanEng, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+        if (result == TextToSpeech.ERROR) {
+            stopSpeaking()
+        }
     }
 
-    /**
-     * Speaks text in English.
-     */
     fun speakEnglish(text: String, messageId: Long? = null) {
         val clean = cleanTextForSpeech(text)
         if (clean.isBlank()) return
 
-        stopListening()
+        cancelListening()
         stopSpeaking()
 
         _currentPlayingMessageId.value = messageId
@@ -298,17 +367,21 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
         val params = Bundle()
         val utteranceId = "single_en_${System.currentTimeMillis()}"
         params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
-        tts.speak(clean, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+        _isSpeaking.value = true
+        _currentlySpeakingLang.value = CurrentlySpeakingLanguage.ENGLISH
+        scheduleSpeakingWatchdog(clean.length)
+
+        val result = tts.speak(clean, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+        if (result == TextToSpeech.ERROR) {
+            stopSpeaking()
+        }
     }
 
-    /**
-     * Speaks text in Tamil.
-     */
     fun speakTamil(text: String, messageId: Long? = null) {
         val clean = cleanTextForSpeech(text)
         if (clean.isBlank()) return
 
-        stopListening()
+        cancelListening()
         stopSpeaking()
 
         speakTamilInternal(clean, isChained = false, msgId = messageId)
@@ -334,9 +407,15 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
             TextToSpeech.LANG_NOT_SUPPORTED
         }
 
-        // If Tamil voice is missing on device, fall back to default TTS with announcement
         if (status < TextToSpeech.LANG_AVAILABLE) {
-            tts.language = Locale.getDefault()
+            // Tamil TTS voice pack not installed on device; finish gracefully instead of hanging
+            _isSpeaking.value = false
+            _currentlySpeakingLang.value = CurrentlySpeakingLanguage.NONE
+            _currentPlayingMessageId.value = null
+            if (isChained) {
+                onSpeakingComplete?.invoke()
+            }
+            return
         }
 
         tts.setSpeechRate(_speechRate.value)
@@ -345,12 +424,16 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
         val prefix = if (isChained) "bilingual_ta_" else "single_ta_"
         val utteranceId = "${prefix}${System.currentTimeMillis()}"
         params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
-        tts.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+        _isSpeaking.value = true
+        _currentlySpeakingLang.value = CurrentlySpeakingLanguage.TAMIL
+        scheduleSpeakingWatchdog(text.length)
+
+        val result = tts.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+        if (result == TextToSpeech.ERROR) {
+            stopSpeaking()
+        }
     }
 
-    /**
-     * Backwards-compatible speak function
-     */
     fun speak(text: String, isTamil: Boolean = false) {
         if (isTamil) {
             speakTamil(text)
@@ -360,9 +443,14 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
     }
 
     fun stopSpeaking() {
+        chainedTamilRunnable?.let { mainHandler.removeCallbacks(it) }
+        chainedTamilRunnable = null
+        cancelSpeakingWatchdog()
         pendingTamilUtterance = null
         pendingMessageId = null
-        textToSpeech?.stop()
+        try {
+            textToSpeech?.stop()
+        } catch (_: Exception) {}
         _isSpeaking.value = false
         _currentlySpeakingLang.value = CurrentlySpeakingLanguage.NONE
         _currentPlayingMessageId.value = null
@@ -389,69 +477,137 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
         onResult: ((String) -> Unit)? = null,
         onError: ((String) -> Unit)? = null
     ) {
-        stopSpeaking()
-        cancelListening()
-
-        // Set or reset scoped callbacks
+        autoRetryCount = 0
+        lastRequestedLanguageCode = languageCode
         scopedOnResult = onResult
         scopedOnError = onError
+        startListeningInternal(languageCode, delayMs = 0L)
+    }
+
+    private fun startListeningInternal(languageCode: String, delayMs: Long) {
+        startListeningRunnable?.let { mainHandler.removeCallbacks(it) }
+
+        mainHandler.post {
+            stopSpeaking()
+            isManuallyStoppedOrCancelled = true
+            try {
+                speechRecognizer?.setRecognitionListener(null)
+                speechRecognizer?.cancel()
+                speechRecognizer?.destroy()
+            } catch (_: Exception) {}
+            speechRecognizer = null
+
+            _partialSpeechText.value = ""
+            _speechError.value = null
+            _isListening.value = true
+
+            val runnable = Runnable {
+                isManuallyStoppedOrCancelled = false
+                recreateRecognizerOnMainThread()
+
+                val recognizer = speechRecognizer
+                if (recognizer == null) {
+                    _isListening.value = false
+                    val errorMsg = "Google Voice Typing / Speech service not enabled on this phone"
+                    _speechError.value = errorMsg
+                    val callback = scopedOnError ?: onSpeechError
+                    scopedOnResult = null
+                    scopedOnError = null
+                    callback?.invoke(errorMsg)
+                    return@Runnable
+                }
+
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageCode)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, languageCode)
+                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1800L)
+                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1200L)
+                }
+
+                try {
+                    recognizer.startListening(intent)
+                    _isListening.value = true
+                } catch (e: Exception) {
+                    _isListening.value = false
+                    val errorMsg = e.localizedMessage ?: "Failed to start microphone"
+                    _speechError.value = errorMsg
+                    val callback = scopedOnError ?: onSpeechError
+                    scopedOnResult = null
+                    scopedOnError = null
+                    callback?.invoke(errorMsg)
+                }
+            }
+
+            startListeningRunnable = runnable
+            if (delayMs > 0L) {
+                mainHandler.postDelayed(runnable, delayMs)
+            } else {
+                mainHandler.postDelayed(runnable, 80L)
+            }
+        }
+    }
+
+    /**
+     * Handles speech result coming from either SpeechRecognizer or the System Voice Dialog fallback.
+     */
+    fun deliverExternalSpeechResult(spokenText: String) {
+        val clean = spokenText.trim()
+        if (clean.isBlank()) return
+        _isListening.value = false
+        _speechRms.value = 0f
         _partialSpeechText.value = ""
         _speechError.value = null
-
-        if (speechRecognizer == null) {
-            initializeRecognizer()
-        }
-        if (speechRecognizer == null) {
-            val errorMsg = "Speech recognition is not available on this device"
-            _speechError.value = errorMsg
-            val callback = scopedOnError ?: onSpeechError
-            scopedOnResult = null
-            scopedOnError = null
-            callback?.invoke(errorMsg)
-            return
-        }
-
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageCode)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, languageCode)
-            putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, true)
-            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
-        }
-
-        try {
-            speechRecognizer?.startListening(intent)
-            _isListening.value = true
-        } catch (e: Exception) {
-            _isListening.value = false
-            val errorMsg = e.localizedMessage ?: "Failed to start speech recognition"
-            _speechError.value = errorMsg
-            val callback = scopedOnError ?: onSpeechError
-            scopedOnResult = null
-            scopedOnError = null
-            callback?.invoke(errorMsg)
-        }
+        val callback = scopedOnResult ?: onSpeechResult
+        scopedOnResult = null
+        scopedOnError = null
+        callback?.invoke(clean)
     }
 
     fun stopListening() {
-        try {
-            speechRecognizer?.stopListening()
-        } catch (_: Exception) {}
-        _isListening.value = false
-        _speechRms.value = 0f
+        startListeningRunnable?.let { mainHandler.removeCallbacks(it) }
+        mainHandler.post {
+            val capturedPartial = _partialSpeechText.value.trim()
+            isManuallyStoppedOrCancelled = true
+            try {
+                speechRecognizer?.stopListening()
+            } catch (_: Exception) {}
+            _isListening.value = false
+            _speechRms.value = 0f
+
+            // If user already spoke partial text and tapped stop, deliver it immediately if onResults doesn't fire within 400ms
+            if (capturedPartial.isNotBlank()) {
+                mainHandler.postDelayed({
+                    if (_partialSpeechText.value.isNotBlank()) {
+                        val finalFallback = _partialSpeechText.value.trim()
+                        _partialSpeechText.value = ""
+                        val callback = scopedOnResult ?: onSpeechResult
+                        scopedOnResult = null
+                        scopedOnError = null
+                        callback?.invoke(finalFallback)
+                    }
+                }, 400L)
+            }
+        }
     }
 
     fun cancelListening() {
-        try {
-            speechRecognizer?.cancel()
-        } catch (_: Exception) {}
-        _isListening.value = false
-        _speechRms.value = 0f
-        _partialSpeechText.value = ""
+        startListeningRunnable?.let { mainHandler.removeCallbacks(it) }
+        mainHandler.post {
+            isManuallyStoppedOrCancelled = true
+            try {
+                speechRecognizer?.setRecognitionListener(null)
+                speechRecognizer?.cancel()
+                speechRecognizer?.destroy()
+            } catch (_: Exception) {}
+            speechRecognizer = null
+            _isListening.value = false
+            _speechRms.value = 0f
+            _partialSpeechText.value = ""
+        }
     }
 
     // RecognitionListener callbacks
@@ -471,36 +627,51 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
     override fun onBufferReceived(buffer: ByteArray?) {}
 
     override fun onEndOfSpeech() {
-        _isListening.value = false
+        _speechRms.value = 0f
     }
 
     override fun onError(error: Int) {
-        _isListening.value = false
-        _speechRms.value = 0f
-        val fallbackText = _partialSpeechText.value
+        val fallbackText = _partialSpeechText.value.trim()
         _partialSpeechText.value = ""
+        _speechRms.value = 0f
 
-        // If we captured partial speech and error is NO_MATCH or SPEECH_TIMEOUT,
-        // we can still deliver the captured partial text!
-        if (fallbackText.isNotBlank() && (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)) {
+        // If we already captured partial speech, use it as a valid result!
+        if (fallbackText.isNotBlank()) {
+            _isListening.value = false
+            _speechError.value = null
             val callback = scopedOnResult ?: onSpeechResult
             scopedOnResult = null
             scopedOnError = null
-            callback?.invoke(fallbackText.trim())
+            callback?.invoke(fallbackText)
             return
         }
 
+        // Ignore spurious ERROR_CLIENT if the user manually stopped/cancelled
+        if (isManuallyStoppedOrCancelled && error == SpeechRecognizer.ERROR_CLIENT) {
+            _isListening.value = false
+            return
+        }
+
+        // Automatic self-healing retry for transient BUSY or CLIENT errors on real devices
+        if ((error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY || error == SpeechRecognizer.ERROR_CLIENT) && autoRetryCount < 2) {
+            autoRetryCount++
+            startListeningInternal(lastRequestedLanguageCode, delayMs = 250L)
+            return
+        }
+
+        _isListening.value = false
+
         val message = when (error) {
-            SpeechRecognizer.ERROR_AUDIO -> "Audio recording error (மைக் ரெக்கார்டிங் பிழை)"
-            SpeechRecognizer.ERROR_CLIENT -> "Speech recognizer busy, tap to retry (மீண்டும் முயற்சிக்கவும்)"
-            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission required (மைக் அனுமதி தேவை)"
-            SpeechRecognizer.ERROR_NETWORK -> "Internet connection needed for speech (இணைய இணைப்பு தேவை)"
-            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network timeout (இணைய காலாவதி)"
-            SpeechRecognizer.ERROR_NO_MATCH -> "Could not understand, please speak clearly (பேச்சு துல்லியமாக கேட்கவில்லை)"
-            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Voice recognizer is busy (மீண்டும் அழுத்தவும்)"
-            SpeechRecognizer.ERROR_SERVER -> "Voice server error (சர்வர் பிழை)"
-            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech detected, please speak again (பேச்சு கேட்கவில்லை, மீண்டும் பேசவும்)"
-            else -> "Speech recognition error ($error)"
+            SpeechRecognizer.ERROR_AUDIO -> "மைக் ஆடியோ பிழை — மீண்டும் மைக் பட்டனை அழுத்திப் பேசவும்"
+            SpeechRecognizer.ERROR_CLIENT -> "மைக் தயாராகிறது — மீண்டும் ஒருமுறை தொட்டுப் பேசவும் (Tap Mic to speak)"
+            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "மைக் அனுமதி (Microphone Permission) தேவை"
+            SpeechRecognizer.ERROR_NETWORK -> "இணைய இணைப்பு (Internet) தேவை"
+            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "இணைய காலாவதி — மீண்டும் முயற்சிக்கவும்"
+            SpeechRecognizer.ERROR_NO_MATCH -> "பேச்சு தெளிவாகக் கேட்கவில்லை — மைக் பட்டனை தொட்டு சத்தமாகப் பேசவும்"
+            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "மைக் தயாராகிறது — மீண்டும் ஒருமுறை தொட்டுப் பேசவும்"
+            SpeechRecognizer.ERROR_SERVER -> "வாய்ஸ் சர்வர் பிழை — மீண்டும் பேசவும்"
+            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "பேச்சு கேட்கவில்லை — மைக் பட்டனை தொட்டு உடனே பேசவும்"
+            else -> "குரல் பதிவு பிழை ($error) — மீண்டும் முயற்சிக்கவும்"
         }
         _speechError.value = message
         val callback = scopedOnError ?: onSpeechError
@@ -512,6 +683,7 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
     override fun onResults(results: Bundle?) {
         _isListening.value = false
         _speechRms.value = 0f
+        _speechError.value = null
         val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
         val text = matches?.firstOrNull() ?: _partialSpeechText.value
         _partialSpeechText.value = ""
@@ -534,7 +706,11 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
     override fun onEvent(eventType: Int, params: Bundle?) {}
 
     fun cleanup() {
+        startListeningRunnable?.let { mainHandler.removeCallbacks(it) }
+        chainedTamilRunnable?.let { mainHandler.removeCallbacks(it) }
+        cancelSpeakingWatchdog()
         try {
+            speechRecognizer?.setRecognitionListener(null)
             speechRecognizer?.destroy()
             speechRecognizer = null
             textToSpeech?.stop()
@@ -543,4 +719,3 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
         } catch (_: Exception) {}
     }
 }
-

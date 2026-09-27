@@ -95,9 +95,46 @@ Respond strictly in valid JSON format:
     }
 
     private fun getLocalTutorReply(input: String, scenario: String?): TutorResponse {
-        val lower = input.lowercase().trim()
+        val cleanedInput = input.trim()
+        val lower = cleanedInput.lowercase()
 
-        if (lower.contains("hello") || lower.contains("hi") || lower.contains("vanakkam") || lower.contains("வணக்கம்")) {
+        if (lower.contains("good morning") || lower.contains("காலை வணக்கம்")) {
+            return TutorResponse(
+                englishText = "Good morning! I hope you have a productive and wonderful day ahead. What are your plans today?",
+                tamilText = "காலை வணக்கம்! உங்களின் இந்த நாள் மிகவும் சிறப்பாக அமைய வாழ்த்துகள். இன்று உங்களின் திட்டம் என்ன?",
+                tanglishText = "Gud maarning! Ai hop yu haev a pradaktiv and vandarphul dey ahed.",
+                coachingTip = "'Good morning' சொன்ன பிறகு 'Hope you have a great day!' என்று சேர்த்துச் சொன்னால் உரையாடல் இனிமையாகத் தொடங்கும்."
+            )
+        }
+
+        if (lower.contains("good evening") || lower.contains("good afternoon") || lower.contains("மாலை வணக்கம்")) {
+            return TutorResponse(
+                englishText = "Good evening! How was your day today? Tell me one thing you did in English!",
+                tamilText = "மாலை வணக்கம்! இன்று உங்கள் நாள் எப்படி இருந்தது? இன்று நீங்கள் செய்த ஒரு விஷயத்தை ஆங்கிலத்தில் கூறுங்கள்!",
+                tanglishText = "Gud eevning! How vaaz yor dey tudey? Tel mi van thing yu did in Inglish!",
+                coachingTip = "கடந்த காலத்தில் நடந்ததைக் கூற Past Tense (உ.ம்: 'I went to work', 'I met my friend') பயன்படுத்தவும்."
+            )
+        }
+
+        if (lower.contains("how are you") || lower.contains("how is your day") || lower.contains("epdi irukinga") || lower.contains("எப்படி இருக்க") || lower.contains("நலமா")) {
+            return TutorResponse(
+                englishText = "I am doing wonderfully well, thank you for asking! How are you feeling today?",
+                tamilText = "நான் மிகச் சிறப்பாக இருக்கிறேன், கேட்டதற்கு நன்றி! இன்று நீங்கள் எப்படி உணர்கிறீர்கள்?",
+                tanglishText = "Ai am dooing vandarphulli vel, thaenk yu phor aasking! How aar yu pheeling tudey?",
+                coachingTip = "யாராவது 'How are you?' எனக் கேட்டால், 'I am fine' என்பதற்கு பதிலாக 'I'm doing great, thank you!' என கூறிப் பாருங்கள்."
+            )
+        }
+
+        if (lower.contains("fine") || lower.contains("doing well") || lower.contains("good") || lower.contains("நல்லா இருக்கேன்") || lower.contains("nalla iruken")) {
+            return TutorResponse(
+                englishText = "That is wonderful to hear! What topic would you like to practice speaking about right now?",
+                tamilText = "கேட்கவே மகிழ்ச்சியாக உள்ளது! இப்போது எந்த தலைப்பில் ஆங்கிலம் பேசிப் பழக விரும்புகிறீர்கள்?",
+                tanglishText = "Thaat iz vandarphul tu heer! Vaat taapik vud yu laik tu praaktis speeking abowt rait now?",
+                coachingTip = "'I am good' என்பதை விட 'I am doing great!' அல்லது 'Pretty good, thanks!' என்று இயல்பாகப் பேசலாம்."
+            )
+        }
+
+        if (lower.contains("hello") || lower.contains("hi") || lower.contains("hey") || lower.contains("vanakkam") || lower.contains("வணக்கம்")) {
             return TutorResponse(
                 englishText = "Hello! I am Malar, your English companion. How is your day going?",
                 tamilText = "வணக்கம்! நான் மலர், உங்கள் ஆங்கிலத் தோழன். இன்றைய நாள் உங்களுக்கு எப்படி போகிறது?",
@@ -106,16 +143,25 @@ Respond strictly in valid JSON format:
             )
         }
 
-        if (lower.contains("name") || lower.contains("பெயர்") || lower.contains("peru")) {
+        if (lower.contains("name") || lower.contains("who are you") || lower.contains("பெயர்") || lower.contains("peru") || lower.contains("யார்")) {
             return TutorResponse(
-                englishText = "My name is Malar! What can I help you practice speaking today?",
-                tamilText = "என் பெயர் மலர்! இன்று என்ன விஷயத்தை பேசி பழக விரும்புகிறீர்கள்?",
-                tanglishText = "Mai neym iz Malar! Vaat kaen ai help yu praaktis speeking tudey?",
-                coachingTip = "'My name is...' என முழு வாக்கியமாக அறிமுகம் செய்வது சிறந்த வழக்கமாகும்."
+                englishText = "My name is Malar, your spoken English coach! How may I call you?",
+                tamilText = "என் பெயர் மலர், உங்களின் ஆங்கிலப் பயிற்சித் தோழி! உங்களின் பெயர் என்ன?",
+                tanglishText = "Mai neym iz Malar, yor spoken Inglish koch! How mey ai kaal yu?",
+                coachingTip = "உங்களை அறிமுகப்படுத்த 'My name is...' அல்லது 'I am...' எனத் தெளிவாகத் தொடங்கலாம்."
             )
         }
 
-        if (lower.contains("leave") || lower.contains("விடுமுறை") || lower.contains("office") || lower.contains("work")) {
+        if (lower.contains("thank") || lower.contains("நன்றி") || lower.contains("romba nandri")) {
+            return TutorResponse(
+                englishText = "You are most welcome! It is always a pleasure helping you speak confident English.",
+                tamilText = "மகிழ்ச்சி! நீங்கள் தன்னம்பிக்கையுடன் ஆங்கிலம் பேச உதவுவது எனக்கு எப்போதும் மகிழ்ச்சியே.",
+                tanglishText = "Yu aar most velkam! It iz aalveyz a pleshar helping yu speek kaanphident Inglish.",
+                coachingTip = "யாராவது Thank you சொன்னால் 'You're welcome' அல்லது 'Happy to help!' என்று பதில் அளிக்கலாம்."
+            )
+        }
+
+        if (lower.contains("leave") || lower.contains("விடுமுறை") || lower.contains("office") || lower.contains("work") || lower.contains("லீவு")) {
             return TutorResponse(
                 englishText = "I would like to request leave for two days due to some personal work.",
                 tamilText = "எனக்கு சில சொந்த வேலைகள் இருப்பதால் இரண்டு நாட்கள் விடுமுறை தேவைப்படுகிறது.",
@@ -124,39 +170,48 @@ Respond strictly in valid JSON format:
             )
         }
 
-        if (lower.contains("eat") || lower.contains("food") || lower.contains("சாப்பாடு") || lower.contains("saptingala") || lower.contains("breakfast")) {
+        if (lower.contains("eat") || lower.contains("food") || lower.contains("சாப்பாடு") || lower.contains("சாப்பிட்டீங்களா") || lower.contains("saptingala") || lower.contains("breakfast") || lower.contains("lunch") || lower.contains("dinner")) {
             return TutorResponse(
-                englishText = "Yes, I had my breakfast. Have you had your food yet?",
-                tamilText = "ஆம், நான் காலை உணவு சாப்பிட்டுவிட்டேன். நீங்கள் சாப்பிட்டீர்களா?",
-                tanglishText = "Yes, ai haed mai brekphaast. Haev yu haed yor phood yet?",
-                coachingTip = "'Did you have breakfast?' அல்லது 'Have you had breakfast?' எனக் கேட்க வேண்டும். 'Did you had' என சொல்லக்கூடாது."
+                englishText = "Yes, I had my meal. Have you had your food yet? What did you eat?",
+                tamilText = "ஆம், நான் சாப்பிட்டுவிட்டேன். நீங்கள் சாப்பிட்டீர்களா? என்ன சாப்பிட்டீர்கள்?",
+                tanglishText = "Yes, ai haed mai meel. Haev yu haed yor phood yet? Vaat did yu eet?",
+                coachingTip = "'Did you have lunch?' அல்லது 'Have you had your meal?' எனக் கேட்க வேண்டும். 'Did you had' என சொல்லக்கூடாது."
             )
         }
 
         if (lower.contains("tea") || lower.contains("coffee") || lower.contains("டீ") || lower.contains("காபி")) {
             return TutorResponse(
-                englishText = "Would you like a hot cup of tea or filter coffee?",
-                tamilText = "சூடான டீ அல்லது ஃபில்டர் காபி குடிக்கிறீர்களா?",
-                tanglishText = "Vud yu laik a haat kap aav tee oor philtar kaaphi?",
+                englishText = "Would you like a hot cup of tea or filter coffee? Let's take a quick break!",
+                tamilText = "சூடான டீ அல்லது ஃபில்டர் காபி குடிக்கிறீர்களா? ஒரு சிறிய இடைவேளை எடுப்போம்!",
+                tanglishText = "Vud yu laik a haat kap aav tee oor philtar kaaphi? Lets teyk a kvik breyk!",
                 coachingTip = "விருந்தினருக்கு உபசரிக்க 'Do you want tea?' என்பதை விட 'Would you like some tea?' என்பது மரியாதையானது."
             )
         }
 
-        if (lower.contains("how are you") || lower.contains("epdi irukinga") || lower.contains("எப்படி இருக்கீங்க")) {
+        if (lower.contains("job") || lower.contains("interview") || lower.contains("வேலை") || lower.contains("career")) {
             return TutorResponse(
-                englishText = "I am doing wonderfully well, thank you! How about you?",
-                tamilText = "நான் மிகச் சிறப்பாக இருக்கிறேன், நன்றி! நீங்கள் எப்படி இருக்கிறீர்கள்?",
-                tanglishText = "Ai am dooing vandarphulli vel, thaenk yu! How abowt yu?",
-                coachingTip = "யாராவது 'How are you?' எனக் கேட்டால், 'I am fine' என்பதற்கு பதிலாக 'I'm doing well, thank you!' என கூறி பாருங்கள்."
+                englishText = "I am looking for new career opportunities where I can utilize my skills and grow.",
+                tamilText = "எனது திறமைகளைப் பயன்படுத்தி வளரக்கூடிய புதிய வேலை வாய்ப்புகளைத் தேடிக்கொண்டிருக்கிறேன்.",
+                tanglishText = "Ai am looking phor nyoo kareeyar aapportyooniteez ver ai kaen yootilaiz mai skilz.",
+                coachingTip = "'Job search' என்பதற்கு பதிலாக 'Looking for career opportunities' என்று சொன்னால் தொழில்முறை கம்பீரம் இருக்கும்."
             )
         }
 
-        if (lower.contains("job") || lower.contains("interview") || lower.contains("வேலை")) {
+        if (lower.contains("help") || lower.contains("teach") || lower.contains("english") || lower.contains("உதவி") || lower.contains("ஆங்கிலம்") || lower.contains("சொல்லಿಕொடு") || lower.contains("பேச")) {
             return TutorResponse(
-                englishText = "I am looking for new career opportunities where I can utilize my skills.",
-                tamilText = "எனது திறமைகளை பயன்படுத்தக்கூடிய புதிய வேலை வாய்ப்புகளை தேடிக்கொண்டிருக்கிறேன்.",
-                tanglishText = "Ai am looking phor nyoo kareeyar aapportyooniteez ver ai kaen yootilaiz mai skilz.",
-                coachingTip = "'Job search' என்பதற்கு பதிலாக 'Looking for career opportunities' என்று சொன்னால் தொழில்முறை கம்பீரம் இருக்கும்."
+                englishText = "Sure! Let's practice step by step. Repeat after me: 'Could you please speak a little slower?'",
+                tamilText = "நிச்சயமாக! படிப்படியாகப் பயிற்சி செய்வோம். என்னைப் பின்பற்றிச் சொல்லுங்கள்: 'தயவுசெய்து சற்று மெதுவாகப் பேசுகிறீர்களா?'",
+                tanglishText = "Kud yu pleez speek a litil slovar?",
+                coachingTip = "மற்றவர் வேகமாக ஆங்கிலம் பேசும்போது தயங்காமல் 'Could you please speak a bit slower?' எனக் கேட்கலாம்."
+            )
+        }
+
+        if (lower.contains("where") || lower.contains("ஊர்") || lower.contains("எங்கே") || lower.contains("place") || lower.contains("location")) {
+            return TutorResponse(
+                englishText = "Could you please tell me how to get to the nearest bus station from here?",
+                tamilText = "இங்கிருந்து அருகிலுள்ள பேருந்து நிலையத்திற்கு எப்படிச் செல்வது என்று தயவுசெய்து கூற முடியுமா?",
+                tanglishText = "Kud yu pleez tel mi how tu get tu dhi neeyarest bas steyshan phram heer?",
+                coachingTip = "வழி கேட்கும்போது 'Excuse me, could you tell me how to get to...' என்று தொடங்குவது மிகவும் நாகரிகமானது."
             )
         }
 
@@ -169,13 +224,23 @@ Respond strictly in valid JSON format:
             )
         }
 
-        // Generic encouraging conversation reply
-        return TutorResponse(
-            englishText = "You expressed that nicely! Try saying: 'I am practicing English every day to improve my fluency.'",
-            tamilText = "அழகாக பேசினீர்கள்! 'ஆங்கிலத்தில் சரளமாக பேச நான் தினமும் பயிற்சி செய்கிறேன்' என சொல்லி பழகுங்கள்.",
-            tanglishText = "Ai am praaktising Inglish evridey tu improov mai phlooansi.",
-            coachingTip = "தவறு செய்தாலும் கவலைப்பட வேண்டாம்! தொடர்ந்து சத்தமாக பேசுவதே சரளமான ஆங்கிலத்திற்கான எளிய வழி."
-        )
+        // Dynamic contextual reply acknowledging what the user actually said
+        val hasTamilScript = cleanedInput.any { it in '\u0B80'..'\u0BFF' }
+        return if (hasTamilScript) {
+            TutorResponse(
+                englishText = "I heard you say \"$cleanedInput\". In polite English, you can say: \"Could we talk about this for a moment?\"",
+                tamilText = "\"$cleanedInput\" என்று அழகாகக் கூறினீர்கள்! தொடர்ந்து என்னுடன் ஆங்கிலத்தில் பேசிப் பழகுங்கள்.",
+                tanglishText = "Kud vee taak abowt dhis phor a moment?",
+                coachingTip = "தமிழில் நினைக்கும் கருத்தை சிறிய ஆங்கில வாக்கியங்களாக (Subject + Verb + Object) மாற்றிப் பேசிப் பழகுங்கள்."
+            )
+        } else {
+            TutorResponse(
+                englishText = "Great job saying: \"$cleanedInput\"! Keep going — what else happened today?",
+                tamilText = "\"$cleanedInput\" என்று மிகத் தெளிவாகச் சொன்னீர்கள்! தொடர்ந்து பேசுங்கள் — இன்று வேறு என்ன நடந்தது?",
+                tanglishText = "Greyt jaab seying: \"$cleanedInput\"! Keep goying — vaat els haepend tudey?",
+                coachingTip = "மிக நன்று! இவ்வாறு முழு வாக்கியங்களாகச் சத்தமாகப் பேசுவது உங்கள் ஆங்கிலத் தயக்கத்தை விரைவில் போக்கும்."
+            )
+        }
     }
 
     suspend fun translateTamilToEnglish(tamilText: String): Map<String, String> = withContext(Dispatchers.IO) {

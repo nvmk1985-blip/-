@@ -103,6 +103,36 @@ fun VoiceBotScreen(
     val activeScenario by viewModel.activeScenario.collectAsState()
     val context = LocalContext.current
 
+    val systemSpeechLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val matches = result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+            val spoken = matches?.firstOrNull()
+            if (!spoken.isNullOrBlank()) {
+                viewModel.voiceManager.deliverExternalSpeechResult(spoken)
+            }
+        }
+    }
+
+    val launchSystemVoiceInput = {
+        try {
+            viewModel.voiceManager.stopSpeaking()
+            val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(
+                    android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                )
+                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, selectedSttLanguage.code)
+                putExtra(
+                    android.speech.RecognizerIntent.EXTRA_PROMPT,
+                    if (selectedSttLanguage == SttLanguage.TAMIL) "தமிழில் பேசுங்கள்..." else "Speak in English..."
+                )
+            }
+            systemSpeechLauncher.launch(intent)
+        } catch (_: Exception) {}
+    }
+
     val botPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -265,20 +295,22 @@ fun VoiceBotScreen(
                         Text(
                             text = "Mic: ",
                             fontSize = 11.sp,
+                            maxLines = 1,
+                            softWrap = false,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         FilterChip(
                             selected = selectedSttLanguage == SttLanguage.ENGLISH,
                             onClick = { viewModel.setSttLanguage(SttLanguage.ENGLISH) },
-                            label = { Text("🇬🇧 Eng", fontSize = 11.sp) },
+                            label = { Text("🇬🇧 Eng", fontSize = 10.5.sp, maxLines = 1, softWrap = false) },
                             modifier = Modifier.height(28.dp).testTag("stt_lang_en")
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         FilterChip(
                             selected = selectedSttLanguage == SttLanguage.TAMIL,
                             onClick = { viewModel.setSttLanguage(SttLanguage.TAMIL) },
-                            label = { Text("🇮🇳 தமிழ்", fontSize = 11.sp) },
+                            label = { Text("🇮🇳 தமிழ்", fontSize = 10.5.sp, maxLines = 1, softWrap = false) },
                             modifier = Modifier.height(28.dp).testTag("stt_lang_ta")
                         )
                     }
@@ -409,14 +441,39 @@ fun VoiceBotScreen(
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                 ) {
-                    Text(
-                        text = if (currentlySpeakingLang == CurrentlySpeakingLanguage.TAMIL) "🔊 மலர் தமிழில் விளக்குகிறார்..." else "🔊 Malar is speaking in English...",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (currentlySpeakingLang == CurrentlySpeakingLanguage.TAMIL) "🔊 மலர் தமிழில் விளக்குகிறார்..." else "🔊 Malar is speaking in English...",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        TextButton(
+                            onClick = { viewModel.voiceManager.stopSpeaking() },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.height(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Stop,
+                                contentDescription = "Stop speaking",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Stop (நிறுத்து)",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                     AudioWaveVisualizer(
                         isListening = false,
                         isSpeaking = true,
@@ -430,11 +487,18 @@ fun VoiceBotScreen(
         // Error message banner if speech recognition encountered an error
         if (speechError != null && !isListening) {
             Surface(
-                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f),
-                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.92f),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .clickable {
+                        if (hasAudioRecordingPermission(context)) {
+                            viewModel.voiceManager.startListening(selectedSttLanguage.code)
+                        } else {
+                            botPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    }
             ) {
                 Row(
                     modifier = Modifier
@@ -449,6 +513,25 @@ fun VoiceBotScreen(
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.weight(1f)
                     )
+                    TextButton(
+                        onClick = { launchSystemVoiceInput() },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                        modifier = Modifier.height(30.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = "System Voice Input",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = "Popup Mic",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     IconButton(
                         onClick = { viewModel.voiceManager.clearSpeechError() },
                         modifier = Modifier.size(24.dp)

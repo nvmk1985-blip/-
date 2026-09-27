@@ -365,6 +365,10 @@ fun PersistentPushToTalkButton(
         label = "ptt_color"
     )
 
+    val currentIsListening by androidx.compose.runtime.rememberUpdatedState(isListening)
+    val currentOnStart by androidx.compose.runtime.rememberUpdatedState(onStartPushToTalk)
+    val currentOnStop by androidx.compose.runtime.rememberUpdatedState(onStopPushToTalk)
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -374,15 +378,15 @@ fun PersistentPushToTalkButton(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(56.dp)
-                .pointerInput(isListening) {
+                .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
                             isPressed = true
                             val pressStartTime = System.currentTimeMillis()
-                            val wasAlreadyListening = isListening
+                            val wasAlreadyListening = currentIsListening
 
                             if (!wasAlreadyListening) {
-                                onStartPushToTalk()
+                                currentOnStart()
                             }
 
                             val released = tryAwaitRelease()
@@ -390,16 +394,12 @@ fun PersistentPushToTalkButton(
                             val holdDuration = System.currentTimeMillis() - pressStartTime
 
                             if (released) {
-                                if (holdDuration >= 300L) {
-                                    // True Push-to-Talk hold & release
-                                    onStopPushToTalk()
-                                } else if (wasAlreadyListening) {
-                                    // Quick tap while already listening stops recording
-                                    onStopPushToTalk()
-                                }
-                            } else {
-                                if (holdDuration >= 300L) {
-                                    onStopPushToTalk()
+                                if (wasAlreadyListening) {
+                                    // Tapping while already listening stops recording
+                                    currentOnStop()
+                                } else if (holdDuration >= 1200L) {
+                                    // True long hold & release (1.2s+)
+                                    currentOnStop()
                                 }
                             }
                         }
