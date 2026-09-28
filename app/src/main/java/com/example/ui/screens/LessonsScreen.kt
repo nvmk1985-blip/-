@@ -82,6 +82,7 @@ fun LessonsScreen(
     val practiceResult by viewModel.lastPracticeResult.collectAsState()
 
     val tabs = listOf(
+        "PDF Course Book" to "PDF பாடப்புத்தகம்",
         "Adi's Book" to "நூல் பயிற்சி",
         "Phrases" to "வாக்கியம்",
         "Roleplay" to "உரையாடல்",
@@ -126,24 +127,28 @@ fun LessonsScreen(
         }
 
         when (selectedTab) {
-            0 -> BookCourseTab(
+            0 -> SpokenEnglishPdfBookSection(
                 viewModel = viewModel,
                 onStartRoleplay = onStartRoleplay
             )
-            1 -> ConversationsTab(
+            1 -> BookCourseTab(
+                viewModel = viewModel,
+                onStartRoleplay = onStartRoleplay
+            )
+            2 -> ConversationsTab(
                 viewModel = viewModel,
                 selectedCategory = selectedCategory,
                 savedPhrases = savedPhrases.map { it.englishText }.toSet(),
                 onSelectCategory = { viewModel.selectCategory(it) }
             )
-            2 -> RoleplayTab(
+            3 -> RoleplayTab(
                 onStartScenario = { scenario ->
                     viewModel.startScenario(scenario)
                     onStartRoleplay(scenario)
                 }
             )
-            3 -> GrammarTab(viewModel = viewModel)
-            4 -> MistakesTab(viewModel = viewModel)
+            4 -> GrammarTab(viewModel = viewModel)
+            5 -> MistakesTab(viewModel = viewModel)
         }
     }
 }

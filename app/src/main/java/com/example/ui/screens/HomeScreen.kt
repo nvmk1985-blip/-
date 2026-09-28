@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Work
@@ -314,6 +315,61 @@ fun HomeScreen(
         }
 
         // "How to say in English?" Instant helper banner
+        // Spoken English via Tamil - Complete 30-Day PDF Course Book Card
+        item {
+            Card(
+                onClick = onNavigateToLessons,
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF0F766E)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("spoken_english_pdf_course_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.White.copy(alpha = 0.2f),
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.PictureAsPdf,
+                                contentDescription = "Spoken English via Tamil PDF Book",
+                                tint = Color(0xFFFDE68A),
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "📕 Spoken English via Tamil (PDF Book)",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 15.sp,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "தமிழ் வழியே ஸ்போக்கன் இங்கிலீஷ் முழுப் பாடப்புத்தகம் (18 PDF பக்கங்கள் • 10 யூனிட்கள் • தனம் டீச்சர் & சுபிக்சா)",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.92f)
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Open PDF Course Book",
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+
         // Adi's Book Featured Course Card
         item {
             Card(
