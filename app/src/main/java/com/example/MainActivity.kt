@@ -192,6 +192,9 @@ fun MainApp(mainViewModel: MainViewModel = viewModel()) {
                     viewModel = mainViewModel,
                     onStartRoleplay = {
                         currentScreen = AppScreen.BOT
+                    },
+                    onNavigateToSavedBooks = {
+                        currentScreen = AppScreen.SAVED
                     }
                 )
                 AppScreen.HOW_TO_SAY -> HowToSayScreen(viewModel = mainViewModel)

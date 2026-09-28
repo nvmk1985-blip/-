@@ -1,5 +1,8 @@
 package com.example.util
 
+import android.app.DownloadManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -11,6 +14,7 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.graphics.pdf.PdfRenderer
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -19,11 +23,25 @@ import android.provider.MediaStore
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.util.LruCache
+import android.widget.Toast
 import androidx.core.content.FileProvider
+import com.example.data.db.SavedPhraseEntity
+import com.example.data.lessons.FreePdfBookItem
 import com.example.data.lessons.PdfCoursePage
+import com.example.data.lessons.PdfCourseSentence
+import com.example.data.lessons.PdfTableRow
 import com.example.data.lessons.SpokenEnglishPdfCourseData
 import java.io.File
 import java.io.FileOutputStream
+
+data class SavedPdfResult(
+    val fileName: String,
+    val displayPath: String,
+    val localFile: File,
+    val contentUri: Uri?,
+    val fileSizeKb: Long
+)
 
 object CoursePdfGenerator {
 
@@ -31,36 +49,126 @@ object CoursePdfGenerator {
     private const val PAGE_HEIGHT = 1160
     private const val MARGIN_X = 34f
     private const val CONTENT_WIDTH = PAGE_WIDTH - (MARGIN_X * 2)
+    private const val PREFS_DOWNLOADED_BOOKS = "downloaded_pdf_books_prefs"
+
+    // LruCache for fast & smooth vertical scrolling of PDF pages in LazyColumn
+    private val pageBitmapCache = object : LruCache<String, Bitmap>(10) {
+        override fun sizeOf(key: String, value: Bitmap): Int = 1
+    }
 
     fun getOrCreateCoursePdfFile(context: Context, forceRegenerate: Boolean = false): File {
         val pdfFile = File(context.filesDir, SpokenEnglishPdfCourseData.PDF_FILE_NAME)
         if (!pdfFile.exists() || pdfFile.length() < 4096L || forceRegenerate) {
-            generateCoursePdfFile(pdfFile)
+            generatePagesPdfFile(pdfFile, SpokenEnglishPdfCourseData.pages, SpokenEnglishPdfCourseData.BOOK_TITLE_TA)
         }
         return pdfFile
     }
 
-    private fun generateCoursePdfFile(outputFile: File) {
+    fun getOrCreateBookPdfFile(
+        context: Context,
+        bookItem: FreePdfBookItem,
+        forceRegenerate: Boolean = false
+    ): File {
+        val pdfFile = File(context.filesDir, bookItem.fileName)
+        if (!pdfFile.exists() || pdfFile.length() < 2048L || forceRegenerate) {
+            val pages = bookItem.pagesBuilder()
+            generatePagesPdfFile(pdfFile, pages, bookItem.titleTamil, bookItem.accentColorHex)
+        }
+        return pdfFile
+    }
+
+    fun generateSavedPhrasesNotebookPdf(
+        context: Context,
+        savedPhrases: List<SavedPhraseEntity>
+    ): File {
+        val fileName = "Subi_Saved_Spoken_English_Notebook.pdf"
+        val pdfFile = File(context.filesDir, fileName)
+        val pages = mutableListOf<PdfCoursePage>()
+
+        if (savedPhrases.isEmpty()) {
+            pages.add(SpokenEnglishPdfCourseData.pages.first())
+        } else {
+            val chunks = savedPhrases.chunked(6)
+            chunks.forEachIndexed { idx, chunk ->
+                pages.add(
+                    PdfCoursePage(
+                        pageNumber = idx + 1,
+                        unitTag = "SAVED NOTEBOOK • சேமித்த வாக்கியங்கள்",
+                        dayRange = "Page ${idx + 1} of ${chunks.size}",
+                        titleEnglish = "Subiksha's (Subi) Saved Spoken English Notebook",
+                        titleTamil = "சுபிக்சாவின் (சுபி) சேமித்த ஆங்கில வாக்கியங்கள் தொகுப்பு (பக்கம் ${idx + 1})",
+                        introExplanationTamil = "நீங்கள் ஆப்பில் சேமித்த முக்கிய ஆங்கில வாக்கியங்கள், அவற்றின் தமிழ் உச்சரிப்பு மற்றும் தமிழ் அர்த்தம் இங்கே தொகுக்கப்பட்டுள்ளன.",
+                        formulaBoxTitle = "⭐ தனம் டீச்சர் அறிவுரை (Daily Revision Tip)",
+                        formulas = listOf(
+                            "தினமும் காலையிலும் மாலையிலும் இந்தச் சேமித்த வாக்கியங்களை 3 முறை சத்தமாக வாசித்துப் பழகுங்கள்!"
+                        ),
+                        tableHeaders = listOf("Category", "English Sentence", "தமிழ் அர்த்தம்"),
+                        tableRows = chunk.map { item ->
+                            PdfTableRow(item.category, item.englishText, item.tamilText)
+                        },
+                        sentencesTitle = "🗣️ சேமித்த வாக்கியங்கள் & உச்சரிப்பு",
+                        sentences = chunk.map { item ->
+                            PdfCourseSentence(
+                                english = item.englishText,
+                                tamilPronunciation = item.tanglishText.ifBlank { item.englishText },
+                                tamilMeaning = item.tamilText,
+                                grammarNote = "பிரிவு: ${item.category}"
+                            )
+                        },
+                        teacherTipTamil = "தனம் டீச்சர் குறிப்பு: சுபி செல்லம், நீ சேமித்த ஒவ்வொரு வாக்கியமும் உன் ஆங்கிலப் பேச்சுத் திறனை வளர்க்கும்!"
+                    )
+                )
+            }
+        }
+
+        generatePagesPdfFile(
+            outputFile = pdfFile,
+            pages = pages,
+            bookTitleFooter = "சுபிக்சாவின் (சுபி) சேமித்த வாக்கியங்கள் PDF நோட்புக்",
+            primaryColorHex = "#0F766E"
+        )
+        return pdfFile
+    }
+
+    fun generatePagesPdfFile(
+        outputFile: File,
+        pages: List<PdfCoursePage>,
+        bookTitleFooter: String = SpokenEnglishPdfCourseData.BOOK_TITLE_TA,
+        primaryColorHex: String = "#0F766E"
+    ) {
         val document = PdfDocument()
-        val pages = SpokenEnglishPdfCourseData.pages
-        val totalPages = pages.size
+        val safePages = if (pages.isNotEmpty()) pages else SpokenEnglishPdfCourseData.pages
+        val totalPages = safePages.size
 
         try {
-            pages.forEachIndexed { index, coursePage ->
+            safePages.forEachIndexed { index, coursePage ->
                 val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, index + 1).create()
                 val page = document.startPage(pageInfo)
-                drawCoursePage(page.canvas, coursePage, totalPages)
+                drawCoursePage(
+                    canvas = page.canvas,
+                    pageData = coursePage.copy(pageNumber = index + 1),
+                    totalPages = totalPages,
+                    bookTitleFooter = bookTitleFooter,
+                    primaryColorHex = primaryColorHex
+                )
                 document.finishPage(page)
             }
             FileOutputStream(outputFile).use { out ->
                 document.writeTo(out)
+                out.flush()
             }
         } finally {
             document.close()
         }
     }
 
-    private fun drawCoursePage(canvas: Canvas, pageData: PdfCoursePage, totalPages: Int) {
+    private fun drawCoursePage(
+        canvas: Canvas,
+        pageData: PdfCoursePage,
+        totalPages: Int,
+        bookTitleFooter: String,
+        primaryColorHex: String
+    ) {
         val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#FFFDF9")
             style = Paint.Style.FILL
@@ -83,8 +191,13 @@ object CoursePdfGenerator {
         var currentY = 28f
 
         // 1. Top Textbook Header Banner
+        val bannerColor = try {
+            if (pageData.pageNumber == 1) Color.parseColor("#1E3A8A") else Color.parseColor(primaryColorHex)
+        } catch (_: Exception) {
+            Color.parseColor("#0F766E")
+        }
         val headerBannerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (pageData.pageNumber == 1) Color.parseColor("#1E3A8A") else Color.parseColor("#0F766E")
+            color = bannerColor
             style = Paint.Style.FILL
         }
         val headerHeight = if (pageData.pageNumber == 1) 136f else 112f
@@ -411,7 +524,7 @@ object CoursePdfGenerator {
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
         canvas.drawText(
-            "${SpokenEnglishPdfCourseData.BOOK_TITLE_TA}  •  தனம் டீச்சர் & சுபிக்சா (சுபி, 9 வயது)",
+            "$bookTitleFooter  •  தனம் டீச்சர் & சுபிக்சா (சுபி, 9 வயது)",
             MARGIN_X,
             PAGE_HEIGHT - 19f,
             footerPaint
@@ -472,8 +585,14 @@ object CoursePdfGenerator {
         }
     }
 
-    fun renderPdfPageToBitmap(pdfFile: File, pageIndex: Int, scale: Float = 2.0f): Bitmap? {
+    @Synchronized
+    fun renderPdfPageToBitmap(pdfFile: File, pageIndex: Int, scale: Float = 1.75f): Bitmap? {
         if (!pdfFile.exists()) return null
+        val cacheKey = "${pdfFile.name}_${pdfFile.length()}_p${pageIndex}_s$scale"
+        val cached = pageBitmapCache.get(cacheKey)
+        if (cached != null && !cached.isRecycled) {
+            return cached
+        }
         return try {
             ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
                 PdfRenderer(pfd).use { renderer ->
@@ -484,6 +603,7 @@ object CoursePdfGenerator {
                         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                         bitmap.eraseColor(Color.WHITE)
                         page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        pageBitmapCache.put(cacheKey, bitmap)
                         bitmap
                     }
                 }
@@ -495,10 +615,11 @@ object CoursePdfGenerator {
 
     fun copyUriToCustomPdfFile(context: Context, sourceUri: Uri): File? {
         return try {
-            val destFile = File(context.cacheDir, "user_imported_book.pdf")
+            val destFile = File(context.cacheDir, "user_imported_book_${System.currentTimeMillis() % 1000}.pdf")
             context.contentResolver.openInputStream(sourceUri)?.use { input ->
                 FileOutputStream(destFile).use { output ->
                     input.copyTo(output)
+                    output.flush()
                 }
             }
             if (destFile.exists() && destFile.length() > 100L) destFile else null
@@ -513,6 +634,7 @@ object CoursePdfGenerator {
                 pdfFile.inputStream().use { input ->
                     input.copyTo(out)
                 }
+                out.flush()
             }
             true
         } catch (e: Exception) {
@@ -520,46 +642,164 @@ object CoursePdfGenerator {
         }
     }
 
-    fun savePdfToDownloads(context: Context, pdfFile: File): Result<String> {
+    /**
+     * Saves the PDF to the device's public Downloads folder (and app external Downloads as backup),
+     * indexes it via MediaScanner, records it in SharedPreferences, and returns rich SavedPdfResult.
+     */
+    fun savePdfToDownloads(
+        context: Context,
+        pdfFile: File,
+        customFileName: String? = null,
+        bookId: String? = null
+    ): Result<SavedPdfResult> {
         return try {
-            val fileName = SpokenEnglishPdfCourseData.PDF_FILE_NAME
+            val validSourceFile = if (pdfFile.exists() && pdfFile.length() > 1024L) {
+                pdfFile
+            } else {
+                getOrCreateCoursePdfFile(context, forceRegenerate = true)
+            }
+
+            val baseFileName = (customFileName ?: validSourceFile.name).let {
+                if (it.endsWith(".pdf", ignoreCase = true)) it else "$it.pdf"
+            }
+            val sizeKb = (validSourceFile.length() / 1024L).coerceAtLeast(1L)
+
+            // Always save a copy in app's accessible external Downloads directory
+            val appDownloadsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
+            if (!appDownloadsDir.exists()) appDownloadsDir.mkdirs()
+            val localDownloadedCopy = File(appDownloadsDir, baseFileName)
+            validSourceFile.copyTo(localDownloadedCopy, overwrite = true)
+
+            var savedDisplayPath = "Downloads/$baseFileName"
+            var savedContentUri: Uri? = null
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val resolver = context.contentResolver
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                    put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                }
-                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-                    ?: return Result.failure(IllegalStateException("Unable to create Downloads entry"))
-                resolver.openOutputStream(uri)?.use { out ->
-                    pdfFile.inputStream().use { input ->
-                        input.copyTo(out)
+                fun insertToMediaStore(nameToTry: String): Uri? {
+                    return try {
+                        val contentValues = ContentValues().apply {
+                            put(MediaStore.MediaColumns.DISPLAY_NAME, nameToTry)
+                            put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+                            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                            put(MediaStore.MediaColumns.IS_PENDING, 1)
+                        }
+                        resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                    } catch (_: Exception) {
+                        null
                     }
                 }
-                Result.success("Downloads/$fileName")
+
+                var targetName = baseFileName
+                var uri = insertToMediaStore(targetName)
+                if (uri == null) {
+                    val stem = baseFileName.removeSuffix(".pdf")
+                    targetName = "${stem}_${System.currentTimeMillis() % 10000}.pdf"
+                    uri = insertToMediaStore(targetName)
+                }
+
+                if (uri != null) {
+                    resolver.openOutputStream(uri)?.use { out ->
+                        validSourceFile.inputStream().use { input ->
+                            input.copyTo(out)
+                        }
+                        out.flush()
+                    }
+                    val finishValues = ContentValues().apply {
+                        put(MediaStore.MediaColumns.IS_PENDING, 0)
+                    }
+                    runCatching { resolver.update(uri, finishValues, null, null) }
+                    savedContentUri = uri
+                    savedDisplayPath = "Downloads/$targetName"
+                }
             } else {
-                val downloadsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
-                val target = File(downloadsDir, fileName)
-                pdfFile.copyTo(target, overwrite = true)
-                Result.success(target.absolutePath)
+                @Suppress("DEPRECATION")
+                val publicDownloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                runCatching {
+                    if (!publicDownloads.exists()) publicDownloads.mkdirs()
+                    val pubTarget = File(publicDownloads, baseFileName)
+                    validSourceFile.copyTo(pubTarget, overwrite = true)
+                    MediaScannerConnection.scanFile(
+                        context,
+                        arrayOf(pubTarget.absolutePath),
+                        arrayOf("application/pdf"),
+                        null
+                    )
+                    savedDisplayPath = "Downloads/$baseFileName"
+                }
             }
+
+            runCatching {
+                MediaScannerConnection.scanFile(
+                    context,
+                    arrayOf(localDownloadedCopy.absolutePath),
+                    arrayOf("application/pdf"),
+                    null
+                )
+            }
+
+            if (bookId != null) {
+                markBookDownloaded(context, bookId, savedDisplayPath)
+            } else {
+                markBookDownloaded(context, "book_30days_complete_course", savedDisplayPath)
+            }
+
+            Result.success(
+                SavedPdfResult(
+                    fileName = baseFileName,
+                    displayPath = savedDisplayPath,
+                    localFile = localDownloadedCopy,
+                    contentUri = savedContentUri,
+                    fileSizeKb = sizeKb
+                )
+            )
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
+    fun markBookDownloaded(context: Context, bookId: String, savedPath: String) {
+        val prefs = context.getSharedPreferences(PREFS_DOWNLOADED_BOOKS, Context.MODE_PRIVATE)
+        prefs.edit().putString(bookId, savedPath).apply()
+    }
+
+    fun getDownloadedBooksMap(context: Context): Map<String, String> {
+        val prefs = context.getSharedPreferences(PREFS_DOWNLOADED_BOOKS, Context.MODE_PRIVATE)
+        return prefs.all.mapValues { it.value?.toString().orEmpty() }.filterValues { it.isNotBlank() }
+    }
+
+    /**
+     * Opens or shares the PDF file via FileProvider. Returns true if an external activity handled it.
+     */
     fun shareOrOpenPdf(context: Context, pdfFile: File, openDirectly: Boolean): Boolean {
         return try {
+            val validFile = if (pdfFile.exists() && pdfFile.length() > 500L) {
+                pdfFile
+            } else {
+                getOrCreateCoursePdfFile(context)
+            }
             val authority = "${context.packageName}.fileprovider"
-            val uri = FileProvider.getUriForFile(context, authority, pdfFile)
+            val uri = FileProvider.getUriForFile(context, authority, validFile)
             if (openDirectly) {
                 val viewIntent = Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(uri, "application/pdf")
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                context.startActivity(Intent.createChooser(viewIntent, "PDF புத்தகத்தைத் திற (Open PDF Book)"))
+                val resolved = context.packageManager.queryIntentActivities(viewIntent, 0)
+                if (resolved.isNotEmpty()) {
+                    context.startActivity(viewIntent)
+                    true
+                } else {
+                    // Fallback to Share sheet if no standalone PDF viewer is installed on the device/emulator
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/pdf"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        putExtra(Intent.EXTRA_SUBJECT, validFile.name)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "PDF புத்தகத்தைச் சேமி / பகிர்"))
+                    true
+                }
             } else {
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "application/pdf"
@@ -570,15 +810,65 @@ object CoursePdfGenerator {
                     )
                     putExtra(
                         Intent.EXTRA_TEXT,
-                        "தனம் டீச்சர் உருவாக்கிய சுபிக்சாவின் (சுபி, 9 வயது) 'Spoken English via Tamil' 30-Day Course PDF Book."
+                        "தனம் டீச்சர் உருவாக்கிய சுபிக்சாவின் (சுபி, 9 வயது) 'Spoken English via Tamil' Course PDF Book."
                     )
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 context.startActivity(Intent.createChooser(shareIntent, "PDF புத்தகத்தைப் பகிர் (Share PDF Book)"))
+                true
             }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Triggers both local PDF download to Downloads/ AND opens/enqueues the free web download URL.
+     */
+    fun openWebLinkOrEnqueueDownload(
+        context: Context,
+        url: String,
+        bookTitle: String,
+        fileName: String,
+        openInBrowser: Boolean = true
+    ): Boolean {
+        return try {
+            if (!openInBrowser) {
+                val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
+                if (dm != null && url.startsWith("http")) {
+                    val request = DownloadManager.Request(Uri.parse(url))
+                        .setTitle(bookTitle)
+                        .setDescription("Downloading $fileName")
+                        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                        .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                        .setAllowedOverMetered(true)
+                        .setAllowedOverRoaming(true)
+                    dm.enqueue(request)
+                    Toast.makeText(
+                        context,
+                        "⬇️ '$fileName' டவுன்லோடு தொடங்கப்பட்டது!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return true
+                }
+            }
+            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(browserIntent)
             true
         } catch (e: Exception) {
             false
         }
+    }
+
+    fun copyLinkToClipboard(context: Context, label: String, url: String) {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        clipboard?.setPrimaryClip(ClipData.newPlainText(label, url))
+        Toast.makeText(
+            context,
+            "📋 Download Link நகலெடுக்கப்பட்டது (Copied): $url",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 }

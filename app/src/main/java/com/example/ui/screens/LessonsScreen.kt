@@ -74,6 +74,7 @@ import com.example.ui.viewmodel.MainViewModel
 fun LessonsScreen(
     viewModel: MainViewModel,
     onStartRoleplay: (RoleplayScenario) -> Unit,
+    onNavigateToSavedBooks: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -129,7 +130,8 @@ fun LessonsScreen(
         when (selectedTab) {
             0 -> SpokenEnglishPdfBookSection(
                 viewModel = viewModel,
-                onStartRoleplay = onStartRoleplay
+                onStartRoleplay = onStartRoleplay,
+                onNavigateToSavedBooks = onNavigateToSavedBooks
             )
             1 -> BookCourseTab(
                 viewModel = viewModel,

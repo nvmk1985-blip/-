@@ -1,17 +1,19 @@
 package com.example.ui.screens
 
 import android.graphics.Bitmap
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -25,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,6 +36,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FolderOpen
@@ -40,11 +46,13 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -52,31 +60,32 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -84,6 +93,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.lessons.FreePdfBookItem
+import com.example.data.lessons.FreeSpokenEnglishPdfBooksData
 import com.example.data.lessons.PdfCoursePage
 import com.example.data.lessons.PdfCourseSentence
 import com.example.data.lessons.RoleplayScenario
@@ -92,6 +103,7 @@ import com.example.ui.components.ScoreBadge
 import com.example.ui.components.TtsSpeakerButton
 import com.example.ui.viewmodel.MainViewModel
 import com.example.util.CoursePdfGenerator
+import com.example.util.SavedPdfResult
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -101,6 +113,7 @@ import kotlinx.coroutines.withContext
 fun SpokenEnglishPdfBookSection(
     viewModel: MainViewModel,
     onStartRoleplay: (RoleplayScenario) -> Unit,
+    onNavigateToSavedBooks: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -108,64 +121,56 @@ fun SpokenEnglishPdfBookSection(
 
     var viewMode by remember { mutableIntStateOf(0) } // 0 = PDF Book Reader, 1 = Interactive Course, 2 = Table of Contents
     var currentPageIndex by remember { mutableIntStateOf(0) }
+    var selectedBook by remember { mutableStateOf(FreeSpokenEnglishPdfBooksData.books.first()) }
+    var activeBookPages by remember { mutableStateOf(SpokenEnglishPdfCourseData.pages) }
     var pdfFile by remember { mutableStateOf<File?>(null) }
     var isCustomPdf by remember { mutableStateOf(false) }
     var customPdfName by remember { mutableStateOf("") }
     var totalPageCount by remember { mutableIntStateOf(SpokenEnglishPdfCourseData.pages.size) }
-    var currentPageBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isLoadingPdf by remember { mutableStateOf(true) }
     var statusBannerMessage by remember { mutableStateOf<String?>(null) }
+    var isDownloadingPdf by remember { mutableStateOf(false) }
+    var downloadedPdfResult by remember { mutableStateOf<SavedPdfResult?>(null) }
 
-    // Zoom & pan states for PDF page
+    // Continuous vertical scroll (all pages) vs single page mode
+    var continuousScrollAllPages by remember { mutableStateOf(true) }
     var zoomScale by remember { mutableFloatStateOf(1f) }
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    var offsetY by remember { mutableFloatStateOf(0f) }
 
-    // Initialize built-in Spoken English via Tamil PDF Course Book
-    LaunchedEffect(Unit) {
-        isLoadingPdf = true
-        withContext(Dispatchers.IO) {
-            val generated = CoursePdfGenerator.getOrCreateCoursePdfFile(context)
-            val count = CoursePdfGenerator.getPdfPageCount(generated).coerceAtLeast(1)
-            val bmp = CoursePdfGenerator.renderPdfPageToBitmap(generated, 0)
-            withContext(Dispatchers.Main) {
-                pdfFile = generated
-                totalPageCount = count
-                currentPageBitmap = bmp
-                isLoadingPdf = false
+    // Initialize selected Spoken English via Tamil PDF Course Book
+    LaunchedEffect(selectedBook, isCustomPdf) {
+        if (!isCustomPdf) {
+            isLoadingPdf = true
+            withContext(Dispatchers.IO) {
+                val pages = selectedBook.pagesBuilder()
+                val generated = CoursePdfGenerator.getOrCreateBookPdfFile(context, selectedBook)
+                val count = CoursePdfGenerator.getPdfPageCount(generated).coerceAtLeast(pages.size)
+                withContext(Dispatchers.Main) {
+                    activeBookPages = pages
+                    pdfFile = generated
+                    totalPageCount = count
+                    currentPageIndex = 0
+                    isLoadingPdf = false
+                }
             }
         }
     }
 
-    // Re-render page bitmap when currentPageIndex or pdfFile changes
-    LaunchedEffect(currentPageIndex, pdfFile) {
-        val activeFile = pdfFile ?: return@LaunchedEffect
-        zoomScale = 1f
-        offsetX = 0f
-        offsetY = 0f
-        isLoadingPdf = true
-        withContext(Dispatchers.IO) {
-            val bmp = CoursePdfGenerator.renderPdfPageToBitmap(activeFile, currentPageIndex)
-            withContext(Dispatchers.Main) {
-                currentPageBitmap = bmp
-                isLoadingPdf = false
-            }
-        }
-    }
-
-    // Save PDF As Launcher (Zero-permission system document saver)
+    // Save PDF As Launcher (System Document Picker so user can pick any folder on phone/Drive)
     val savePdfAsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/pdf")
     ) { targetUri ->
-        if (targetUri != null && pdfFile != null) {
+        if (targetUri != null) {
             coroutineScope.launch(Dispatchers.IO) {
-                val ok = CoursePdfGenerator.copyPdfToUri(context, pdfFile!!, targetUri)
+                val fileToSave = pdfFile ?: CoursePdfGenerator.getOrCreateBookPdfFile(context, selectedBook)
+                val ok = CoursePdfGenerator.copyPdfToUri(context, fileToSave, targetUri)
                 withContext(Dispatchers.Main) {
-                    statusBannerMessage = if (ok) {
-                        "✅ PDF புத்தகம் உங்கள் போனில் வெற்றிகரமாகச் சேமிக்கப்பட்டது!"
+                    val msg = if (ok) {
+                        "✅ PDF புத்தகம் நீங்கள் தேர்வு செய்த ஃபோல்டரில் சேமிக்கப்பட்டது!"
                     } else {
                         "⚠️ PDF சேமிப்பதில் சிக்கல் ஏற்பட்டது."
                     }
+                    statusBannerMessage = msg
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -181,14 +186,12 @@ fun SpokenEnglishPdfBookSection(
                 if (copied != null) {
                     val count = CoursePdfGenerator.getPdfPageCount(copied)
                     if (count > 0) {
-                        val bmp = CoursePdfGenerator.renderPdfPageToBitmap(copied, 0)
                         withContext(Dispatchers.Main) {
                             pdfFile = copied
                             isCustomPdf = true
                             customPdfName = "Custom PDF Book ($count Pages)"
                             totalPageCount = count
                             currentPageIndex = 0
-                            currentPageBitmap = bmp
                             viewMode = 0
                             statusBannerMessage = "📖 நீங்கள் தேர்வு செய்த PDF புத்தகம் ($count பக்கங்கள்) திறக்கப்பட்டது!"
                         }
@@ -198,8 +201,29 @@ fun SpokenEnglishPdfBookSection(
         }
     }
 
+    // Download Confirmation Dialog
+    if (downloadedPdfResult != null) {
+        val result = downloadedPdfResult!!
+        PdfDownloadSuccessDialog(
+            savedResult = result,
+            onDismiss = { downloadedPdfResult = null },
+            onOpenPdfExternally = {
+                downloadedPdfResult = null
+                CoursePdfGenerator.shareOrOpenPdf(context, result.localFile, openDirectly = true)
+            },
+            onSaveToCustomFolder = {
+                downloadedPdfResult = null
+                savePdfAsLauncher.launch(result.fileName)
+            },
+            onSharePdf = {
+                downloadedPdfResult = null
+                CoursePdfGenerator.shareOrOpenPdf(context, result.localFile, openDirectly = false)
+            }
+        )
+    }
+
     val modes = listOf(
-        "📄 PDF புத்தகப் பக்கங்கள் (18 Pages)",
+        "📄 PDF புத்தகப் பக்கங்கள் ($totalPageCount Pages)",
         "🎓 ஊடாடும் பாடப் பயிற்சி",
         "📑 பொருளடக்கம் (Index)"
     )
@@ -213,7 +237,7 @@ fun SpokenEnglishPdfBookSection(
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             itemsIndexed(modes) { index, title ->
@@ -280,42 +304,66 @@ fun SpokenEnglishPdfBookSection(
         when (viewMode) {
             0 -> PdfPageReaderView(
                 viewModel = viewModel,
+                pdfFile = pdfFile,
+                selectedBook = selectedBook,
+                allBooks = FreeSpokenEnglishPdfBooksData.books,
+                activeBookPages = activeBookPages,
                 currentPageIndex = currentPageIndex,
                 totalPageCount = totalPageCount,
-                currentPageBitmap = currentPageBitmap,
                 isLoadingPdf = isLoadingPdf,
+                isDownloadingPdf = isDownloadingPdf,
                 isCustomPdf = isCustomPdf,
                 customPdfName = customPdfName,
+                continuousScrollAllPages = continuousScrollAllPages,
                 zoomScale = zoomScale,
-                offsetX = offsetX,
-                offsetY = offsetY,
-                onSelectPage = { currentPageIndex = it.coerceIn(0, (totalPageCount - 1).coerceAtLeast(0)) },
-                onUpdateZoom = { newScale, newX, newY ->
-                    zoomScale = newScale
-                    offsetX = newX
-                    offsetY = newY
+                onSelectBook = { book ->
+                    isCustomPdf = false
+                    selectedBook = book
                 },
+                onToggleContinuousScroll = { continuousScrollAllPages = it },
+                onSelectPage = { currentPageIndex = it.coerceIn(0, (totalPageCount - 1).coerceAtLeast(0)) },
+                onUpdateZoom = { newScale -> zoomScale = newScale },
                 onDownloadPdf = {
-                    val activeFile = pdfFile
-                    if (activeFile != null) {
+                    if (!isDownloadingPdf) {
+                        isDownloadingPdf = true
                         coroutineScope.launch(Dispatchers.IO) {
-                            val res = CoursePdfGenerator.savePdfToDownloads(context, activeFile)
+                            val fileToSave = pdfFile ?: CoursePdfGenerator.getOrCreateBookPdfFile(context, selectedBook)
+                            val desiredName = if (isCustomPdf) "Custom_Spoken_English_Book.pdf" else selectedBook.fileName
+                            val res = CoursePdfGenerator.savePdfToDownloads(
+                                context = context,
+                                pdfFile = fileToSave,
+                                customFileName = desiredName,
+                                bookId = selectedBook.id
+                            )
                             withContext(Dispatchers.Main) {
-                                res.onSuccess { savedPath ->
-                                    statusBannerMessage = "✅ PDF சேமிக்கப்பட்டது: $savedPath"
+                                isDownloadingPdf = false
+                                res.onSuccess { savedInfo ->
+                                    statusBannerMessage = "✅ PDF டவுன்லோடு முடிந்தது: ${savedInfo.displayPath}"
+                                    Toast.makeText(
+                                        context,
+                                        "✅ PDF டவுன்லோடு ஆனது: ${savedInfo.displayPath}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    downloadedPdfResult = savedInfo
                                 }.onFailure {
-                                    savePdfAsLauncher.launch(SpokenEnglishPdfCourseData.PDF_FILE_NAME)
+                                    savePdfAsLauncher.launch(desiredName)
                                 }
                             }
                         }
                     }
                 },
+                onSavePdfAs = {
+                    val desiredName = if (isCustomPdf) "Custom_Spoken_English_Book.pdf" else selectedBook.fileName
+                    savePdfAsLauncher.launch(desiredName)
+                },
                 onSharePdf = {
-                    val activeFile = pdfFile
-                    if (activeFile != null) {
-                        val opened = CoursePdfGenerator.shareOrOpenPdf(context, activeFile, openDirectly = false)
-                        if (!opened) {
-                            savePdfAsLauncher.launch(SpokenEnglishPdfCourseData.PDF_FILE_NAME)
+                    coroutineScope.launch(Dispatchers.IO) {
+                        val fileToShare = pdfFile ?: CoursePdfGenerator.getOrCreateBookPdfFile(context, selectedBook)
+                        withContext(Dispatchers.Main) {
+                            val opened = CoursePdfGenerator.shareOrOpenPdf(context, fileToShare, openDirectly = false)
+                            if (!opened) {
+                                savePdfAsLauncher.launch(selectedBook.fileName)
+                            }
                         }
                     }
                 },
@@ -323,24 +371,15 @@ fun SpokenEnglishPdfBookSection(
                     openCustomPdfLauncher.launch(arrayOf("application/pdf"))
                 },
                 onResetToBuiltInPdf = {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        val generated = CoursePdfGenerator.getOrCreateCoursePdfFile(context)
-                        val count = CoursePdfGenerator.getPdfPageCount(generated).coerceAtLeast(1)
-                        val bmp = CoursePdfGenerator.renderPdfPageToBitmap(generated, 0)
-                        withContext(Dispatchers.Main) {
-                            pdfFile = generated
-                            isCustomPdf = false
-                            totalPageCount = count
-                            currentPageIndex = 0
-                            currentPageBitmap = bmp
-                            statusBannerMessage = "📕 தனம் டீச்சரின் 'Spoken English via Tamil' PDF புத்தகத்திற்குத் திரும்பியது!"
-                        }
-                    }
+                    isCustomPdf = false
+                    selectedBook = FreeSpokenEnglishPdfBooksData.books.first()
                 },
+                onNavigateToSavedBooks = onNavigateToSavedBooks,
                 onStartRoleplay = onStartRoleplay
             )
             1 -> InteractivePdfCourseUnitsView(
                 viewModel = viewModel,
+                pages = activeBookPages,
                 currentPageIndex = currentPageIndex,
                 onSelectPage = { currentPageIndex = it },
                 onOpenInPdfView = { pageIdx ->
@@ -350,7 +389,7 @@ fun SpokenEnglishPdfBookSection(
                 onStartRoleplay = onStartRoleplay
             )
             2 -> PdfTableOfContentsView(
-                viewModel = viewModel,
+                pages = activeBookPages,
                 onJumpToPdfPage = { pageIdx ->
                     currentPageIndex = pageIdx
                     viewMode = 0
@@ -367,393 +406,409 @@ fun SpokenEnglishPdfBookSection(
 @Composable
 private fun PdfPageReaderView(
     viewModel: MainViewModel,
+    pdfFile: File?,
+    selectedBook: FreePdfBookItem,
+    allBooks: List<FreePdfBookItem>,
+    activeBookPages: List<PdfCoursePage>,
     currentPageIndex: Int,
     totalPageCount: Int,
-    currentPageBitmap: Bitmap?,
     isLoadingPdf: Boolean,
+    isDownloadingPdf: Boolean,
     isCustomPdf: Boolean,
     customPdfName: String,
+    continuousScrollAllPages: Boolean,
     zoomScale: Float,
-    offsetX: Float,
-    offsetY: Float,
+    onSelectBook: (FreePdfBookItem) -> Unit,
+    onToggleContinuousScroll: (Boolean) -> Unit,
     onSelectPage: (Int) -> Unit,
-    onUpdateZoom: (Float, Float, Float) -> Unit,
+    onUpdateZoom: (Float) -> Unit,
     onDownloadPdf: () -> Unit,
+    onSavePdfAs: () -> Unit,
     onSharePdf: () -> Unit,
     onOpenCustomPdf: () -> Unit,
     onResetToBuiltInPdf: () -> Unit,
+    onNavigateToSavedBooks: (() -> Unit)?,
     onStartRoleplay: (RoleplayScenario) -> Unit
 ) {
-    val pages = SpokenEnglishPdfCourseData.pages
-    val activeCoursePage: PdfCoursePage? = if (!isCustomPdf && currentPageIndex in pages.indices) {
-        pages[currentPageIndex]
-    } else {
-        null
-    }
+    val coroutineScope = rememberCoroutineScope()
+    val lazyListState = rememberLazyListState()
+
+    // Track which pages have their interactive sentences expanded in continuous scroll mode
+    val expandedSentencesByPage = remember { mutableStateMapOf<Int, Boolean>() }
 
     var practicingSentence by remember { mutableStateOf<String?>(null) }
     val practiceResult by viewModel.lastPracticeResult.collectAsState()
     val isListening by viewModel.voiceManager.isListening.collectAsState()
     val partialSpeechText by viewModel.voiceManager.partialSpeechText.collectAsState()
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // 1. Top Book Banner & PDF Actions (Download / Share / Open Custom PDF)
-        item {
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                Color(0xFF0F766E),
-                                Color(0xFF1E3A8A)
-                            )
-                        ),
-                        shape = RoundedCornerShape(18.dp)
-                    )
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = CircleShape,
-                            color = Color.White.copy(alpha = 0.2f),
-                            modifier = Modifier.size(44.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.PictureAsPdf,
-                                    contentDescription = "PDF Course Book",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (isCustomPdf) customPdfName else SpokenEnglishPdfCourseData.BOOK_TITLE_TA,
-                                color = Color.White,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = if (isCustomPdf) {
-                                    "உங்கள் போனிலிருந்து திறக்கப்பட்ட PDF புத்தகம்"
-                                } else {
-                                    "${SpokenEnglishPdfCourseData.BOOK_AUTHOR} • சுபிக்சா (சுபி, 9 வயது) பதிப்பு"
-                                },
-                                color = Color.White.copy(alpha = 0.9f),
-                                fontSize = 11.5.sp
-                            )
-                        }
-                    }
+    // Header items count before the PDF page items in LazyColumn (Book selector + Top Hero Card + Scroll/Zoom bar)
+    val headerItemsCount = 3
 
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // PDF File Action Buttons
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Button(
-                            onClick = onDownloadPdf,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFFDE68A),
-                                contentColor = Color(0xFF1E293B)
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("download_pdf_button")
-                        ) {
-                            Icon(Icons.Default.Download, contentDescription = "Save PDF", modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("PDF சேமி", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-                        }
-
-                        Button(
-                            onClick = onSharePdf,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White.copy(alpha = 0.2f),
-                                contentColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("share_pdf_button")
-                        ) {
-                            Icon(Icons.Default.Share, contentDescription = "Share PDF", modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("பகிர் / திற", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-                        }
-
-                        Button(
-                            onClick = if (isCustomPdf) onResetToBuiltInPdf else onOpenCustomPdf,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White.copy(alpha = 0.2f),
-                                contentColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("open_custom_pdf_button")
-                        ) {
-                            Icon(
-                                imageVector = if (isCustomPdf) Icons.AutoMirrored.Filled.MenuBook else Icons.Default.FolderOpen,
-                                contentDescription = "Open PDF",
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (isCustomPdf) "பாடப்புத்தகம்" else "வேறு PDF",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                softWrap = false
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // 2. Quick Page Jump Chips (Page 1 .. Page 18)
-        item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(totalPageCount) { pageIdx ->
-                    val isSelected = pageIdx == currentPageIndex
-                    val label = if (!isCustomPdf && pageIdx in pages.indices) {
-                        "P.${pageIdx + 1}: ${pages[pageIdx].unitTag.substringBefore("•").trim()}"
-                    } else {
-                        "பக்கம் ${pageIdx + 1}"
-                    }
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { onSelectPage(pageIdx) },
-                        label = {
-                            Text(
-                                text = label,
-                                fontSize = 11.5.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                maxLines = 1,
-                                softWrap = false
-                            )
-                        }
-                    )
-                }
-            }
-        }
-
-        // 3. Page Navigation & Zoom Bar + Teacher Audio Bar
-        item {
-            Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(10.dp)) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = lazyListState,
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag("pdf_reader_lazy_column")
+        ) {
+            // ITEM 0: Switch between the 8 Free Spoken English via Tamil PDF Books + Link to Saved Page
+            item(key = "book_selector_row") {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedButton(
-                            onClick = { if (currentPageIndex > 0) onSelectPage(currentPageIndex - 1) },
-                            enabled = currentPageIndex > 0,
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Page", modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("முந்தைய", fontSize = 11.sp)
-                        }
-
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "📄 PDF பக்கம் ${currentPageIndex + 1} / $totalPageCount",
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            if (activeCoursePage != null) {
-                                Text(
-                                    text = activeCoursePage.dayRange,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        OutlinedButton(
-                            onClick = { if (currentPageIndex < totalPageCount - 1) onSelectPage(currentPageIndex + 1) },
-                            enabled = currentPageIndex < totalPageCount - 1,
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("அடுத்த", fontSize = 11.sp)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Page", modifier = Modifier.size(16.dp))
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Zoom & Audio Teaching Controls Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(
-                                onClick = {
-                                    val nextZoom = (zoomScale - 0.25f).coerceAtLeast(1f)
-                                    onUpdateZoom(nextZoom, if (nextZoom == 1f) 0f else offsetX, if (nextZoom == 1f) 0f else offsetY)
-                                },
-                                modifier = Modifier.size(34.dp)
-                            ) {
-                                Icon(Icons.Default.ZoomOut, contentDescription = "Zoom Out", modifier = Modifier.size(18.dp))
-                            }
+                        Text(
+                            text = "📚 PDF பாடப்புத்தகம் தேர்வு (8 Free Books):",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        if (onNavigateToSavedBooks != null) {
                             Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.surface,
-                                modifier = Modifier.clickable { onUpdateZoom(1f, 0f, 0f) }
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                modifier = Modifier.clickable { onNavigateToSavedBooks() }
                             ) {
                                 Text(
-                                    text = "${(zoomScale * 100).toInt()}%",
+                                    text = "📥 Save Page-ல் Free Links →",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
-                            IconButton(
-                                onClick = {
-                                    val nextZoom = (zoomScale + 0.35f).coerceAtMost(2.8f)
-                                    onUpdateZoom(nextZoom, offsetX, offsetY)
-                                },
-                                modifier = Modifier.size(34.dp)
-                            ) {
-                                Icon(Icons.Default.ZoomIn, contentDescription = "Zoom In", modifier = Modifier.size(18.dp))
-                            }
-                        }
-
-                        if (activeCoursePage != null) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Button(
-                                    onClick = {
-                                        val engSpeech = activeCoursePage.titleEnglish + ". " +
-                                            activeCoursePage.sentences.joinToString(". ") { it.english }
-                                        val tamSpeech = activeCoursePage.titleTamil + ". " +
-                                            activeCoursePage.introExplanationTamil + ". " +
-                                            activeCoursePage.sentences.joinToString(". ") { it.tamilMeaning }
-                                        viewModel.voiceManager.speakBilingual(engSpeech, tamSpeech)
-                                    },
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    )
-                                ) {
-                                    Icon(Icons.Default.School, contentDescription = "Read Page Aloud", modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("🔊 பக்கத்தை வாசி", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
-                                }
-
-                                OutlinedButton(
-                                    onClick = {
-                                        val firstSentence = activeCoursePage.sentences.firstOrNull()
-                                        val scenario = RoleplayScenario(
-                                            id = "pdf_page_${activeCoursePage.pageNumber}",
-                                            title = activeCoursePage.titleEnglish,
-                                            titleTamil = activeCoursePage.titleTamil,
-                                            botRole = "Dhanam Teacher (தனம் டீச்சர்)",
-                                            userRole = "Student Subiksha (Subi, Age 9 / சுபிக்சா)",
-                                            starterMessage = firstSentence?.english
-                                                ?: "Let's practice ${activeCoursePage.titleEnglish}, Subi!",
-                                            starterTamil = firstSentence?.tamilMeaning
-                                                ?: "வா சுபி! ${activeCoursePage.titleTamil} பாடத்தைப் பேசிப் பழகுவோம்."
-                                        )
-                                        viewModel.startScenario(scenario)
-                                        onStartRoleplay(scenario)
-                                    },
-                                    shape = RoundedCornerShape(10.dp)
-                                ) {
-                                    Icon(Icons.Default.RecordVoiceOver, contentDescription = "Practice", modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("பயில்", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
                         }
                     }
-                }
-            }
-        }
 
-        // 4. Rendered PDF Page Canvas Card (with Pinch-to-Zoom & Pan)
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
-                    .testTag("pdf_page_canvas_card")
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(794f / 1160f)
-                        .clipToBounds()
-                        .background(Color.White)
-                        .pointerInput(Unit) {
-                            detectTransformGestures { _, pan, zoom, _ ->
-                                val newScale = (zoomScale * zoom).coerceIn(1f, 3f)
-                                val maxOffset = (newScale - 1f) * 450f
-                                val newX = if (newScale > 1f) (offsetX + pan.x).coerceIn(-maxOffset, maxOffset) else 0f
-                                val newY = if (newScale > 1f) (offsetY + pan.y).coerceIn(-maxOffset, maxOffset) else 0f
-                                onUpdateZoom(newScale, newX, newY)
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isLoadingPdf || currentPageBitmap == null) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator()
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "PDF பக்கம் ${currentPageIndex + 1} தயாராகிறது...",
-                                fontSize = 13.sp,
-                                color = Color.DarkGray
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(allBooks, key = { it.id }) { book ->
+                            val isSelected = !isCustomPdf && book.id == selectedBook.id
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { onSelectBook(book) },
+                                label = {
+                                    Text(
+                                        text = book.titleTamil.substringBefore("—").trim(),
+                                        fontSize = 11.5.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
+                                }
                             )
                         }
-                    } else {
-                        Image(
-                            bitmap = currentPageBitmap.asImageBitmap(),
-                            contentDescription = "PDF Page ${currentPageIndex + 1}",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer(
-                                    scaleX = zoomScale,
-                                    scaleY = zoomScale,
-                                    translationX = offsetX,
-                                    translationY = offsetY
-                                )
-                        )
                     }
                 }
             }
-        }
 
-        // 5. Interactive Audio & Speaking Cards for the Current PDF Page
-        if (activeCoursePage != null) {
+            // ITEM 1: Top Book Banner & Instant PDF Download / Save As / Share Buttons
+            item(key = "top_pdf_hero_card") {
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color(0xFF0F766E),
+                                    Color(0xFF1E3A8A)
+                                )
+                            ),
+                            shape = RoundedCornerShape(18.dp)
+                        )
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.White.copy(alpha = 0.2f),
+                                modifier = Modifier.size(44.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.PictureAsPdf,
+                                        contentDescription = "PDF Course Book",
+                                        tint = Color(0xFFFDE68A),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (isCustomPdf) customPdfName else selectedBook.titleTamil,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 13.5.sp
+                                )
+                                Text(
+                                    text = if (isCustomPdf) {
+                                        "உங்கள் போனிலிருந்து திறக்கப்பட்ட PDF புத்தகம் ($totalPageCount பக்கங்கள்)"
+                                    } else {
+                                        selectedBook.authorAndEditionTamil
+                                    },
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Primary Download & Save Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Button(
+                                onClick = onDownloadPdf,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFFDE68A),
+                                    contentColor = Color(0xFF1E293B)
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                                modifier = Modifier
+                                    .weight(1.15f)
+                                    .testTag("download_pdf_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = "Download PDF",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isDownloadingPdf) "சேமிக்கிறது..." else "📥 PDF Download",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+
+                            Button(
+                                onClick = onSavePdfAs,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.White.copy(alpha = 0.22f),
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("save_as_pdf_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SaveAlt,
+                                    contentDescription = "Save PDF to Folder",
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "போனில் சேமி",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+
+                            Button(
+                                onClick = onSharePdf,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.White.copy(alpha = 0.22f),
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                                modifier = Modifier
+                                    .weight(0.85f)
+                                    .testTag("share_pdf_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = "Share PDF",
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "பகிர்",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // Secondary Row: Open custom PDF from device or reset
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "💡 மேலே-கீழே தள்ளி (Scroll Up/Down) எல்லாப் பக்கங்களையும் படிக்கலாம்",
+                                fontSize = 10.5.sp,
+                                color = Color(0xFFFEF08A),
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color.White.copy(alpha = 0.18f),
+                                modifier = Modifier
+                                    .clickable {
+                                        if (isCustomPdf) onResetToBuiltInPdf() else onOpenCustomPdf()
+                                    }
+                                    .testTag("open_custom_pdf_button")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = if (isCustomPdf) Icons.AutoMirrored.Filled.MenuBook else Icons.Default.FolderOpen,
+                                        contentDescription = "Open PDF",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (isCustomPdf) "பாடப்புத்தகம்" else "வேறு PDF திற",
+                                        color = Color.White,
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ITEM 2: Page Jump Chips + Scroll Mode Toggle (All Pages Vertical Scroll vs Single Page) + Zoom Controls
+            item(key = "page_jump_and_scroll_controls") {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        // Quick Page Jump Chips
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(totalPageCount) { pageIdx ->
+                                val isSelected = pageIdx == currentPageIndex
+                                val label = if (!isCustomPdf && pageIdx in activeBookPages.indices) {
+                                    "P.${pageIdx + 1}: ${activeBookPages[pageIdx].unitTag.substringBefore("•").trim()}"
+                                } else {
+                                    "பக்கம் ${pageIdx + 1}"
+                                }
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = {
+                                        onSelectPage(pageIdx)
+                                        if (continuousScrollAllPages) {
+                                            coroutineScope.launch {
+                                                lazyListState.animateScrollToItem(headerItemsCount + pageIdx)
+                                            }
+                                        }
+                                    },
+                                    label = {
+                                        Text(
+                                            text = label,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            maxLines = 1,
+                                            softWrap = false
+                                        )
+                                    }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // Scroll Mode Switcher + Zoom Bar
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                FilterChip(
+                                    selected = continuousScrollAllPages,
+                                    onClick = { onToggleContinuousScroll(true) },
+                                    label = {
+                                        Text(
+                                            text = "📜 தொடர் பக்கங்கள் (Scroll Up/Down)",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                )
+                                FilterChip(
+                                    selected = !continuousScrollAllPages,
+                                    onClick = { onToggleContinuousScroll(false) },
+                                    label = {
+                                        Text(
+                                            text = "📄 தனிப் பக்கம்",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                )
+                            }
+
+                            // Zoom Controls (Never blocks vertical scrolling!)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = {
+                                        val nextZoom = (zoomScale - 0.25f).coerceAtLeast(1f)
+                                        onUpdateZoom(nextZoom)
+                                    },
+                                    modifier = Modifier.size(30.dp)
+                                ) {
+                                    Icon(Icons.Default.ZoomOut, contentDescription = "Zoom Out", modifier = Modifier.size(17.dp))
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    modifier = Modifier.clickable { onUpdateZoom(1f) }
+                                ) {
+                                    Text(
+                                        text = "${(zoomScale * 100).toInt()}%",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        val nextZoom = (zoomScale + 0.25f).coerceAtMost(2.25f)
+                                        onUpdateZoom(nextZoom)
+                                    },
+                                    modifier = Modifier.size(30.dp)
+                                ) {
+                                    Icon(Icons.Default.ZoomIn, contentDescription = "Zoom In", modifier = Modifier.size(17.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Speaking Practice Score Banner if active
             if (practiceResult != null && practicingSentence != null) {
-                item {
+                item(key = "speaking_score_card") {
                     Card(
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
@@ -800,64 +855,570 @@ private fun PdfPageReaderView(
                 }
             }
 
-            item {
-                Text(
-                    text = "🔊 பக்கம் ${activeCoursePage.pageNumber} வாக்கியங்களைத் தொட்டுக் கேட்க & பேசிப் பழக:",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.primary
+            // CONTINUOUS VERTICAL SCROLL MODE: All pages in LazyColumn for effortless Up & Down scrolling!
+            if (continuousScrollAllPages) {
+                items(
+                    count = totalPageCount,
+                    key = { pageIdx -> "continuous_pdf_page_${selectedBook.id}_${isCustomPdf}_$pageIdx" }
+                ) { pageIdx ->
+                    val pageCourseData = if (!isCustomPdf && pageIdx in activeBookPages.indices) {
+                        activeBookPages[pageIdx]
+                    } else {
+                        null
+                    }
+                    val showSentences = expandedSentencesByPage[pageIdx] ?: (pageIdx == 0)
+
+                    LazyPdfPageItemCard(
+                        pdfFile = pdfFile,
+                        pageIndex = pageIdx,
+                        totalPageCount = totalPageCount,
+                        coursePage = pageCourseData,
+                        zoomScale = zoomScale,
+                        isSentencesExpanded = showSentences,
+                        onToggleSentences = {
+                            expandedSentencesByPage[pageIdx] = !showSentences
+                        },
+                        onSpeakPage = { pg ->
+                            val engSpeech = pg.titleEnglish + ". " +
+                                pg.sentences.joinToString(". ") { it.english }
+                            val tamSpeech = pg.titleTamil + ". " +
+                                pg.introExplanationTamil + ". " +
+                                pg.sentences.joinToString(". ") { it.tamilMeaning }
+                            viewModel.voiceManager.speakBilingual(engSpeech, tamSpeech)
+                        },
+                        onStartPageRoleplay = { pg ->
+                            val firstSentence = pg.sentences.firstOrNull()
+                            val scenario = RoleplayScenario(
+                                id = "pdf_page_${pg.pageNumber}",
+                                title = pg.titleEnglish,
+                                titleTamil = pg.titleTamil,
+                                botRole = "Dhanam Teacher (தனம் டீச்சர்)",
+                                userRole = "Student Subiksha (Subi, Age 9 / சுபிக்சா)",
+                                starterMessage = firstSentence?.english
+                                    ?: "Let's practice ${pg.titleEnglish}, Subi!",
+                                starterTamil = firstSentence?.tamilMeaning
+                                    ?: "வா சுபி! ${pg.titleTamil} பாடத்தைப் பேசிப் பழகுவோம்."
+                            )
+                            viewModel.startScenario(scenario)
+                            onStartRoleplay(scenario)
+                        },
+                        isListening = isListening,
+                        practicingSentence = practicingSentence,
+                        partialSpeechText = partialSpeechText,
+                        onSpeakBoth = { s ->
+                            viewModel.voiceManager.speakBilingual(s.english, s.tamilMeaning)
+                        },
+                        onSpeakEnglish = { s ->
+                            viewModel.voiceManager.speakEnglish(s.english)
+                        },
+                        onSpeakTamil = { s ->
+                            viewModel.voiceManager.speakTamil(s.tamilMeaning)
+                        },
+                        onToggleSentencePractice = { s ->
+                            if (isListening && practicingSentence == s.english) {
+                                viewModel.voiceManager.stopListening()
+                            } else {
+                                practicingSentence = s.english
+                                viewModel.voiceManager.startListening(
+                                    languageCode = "en-IN",
+                                    onResult = { spoken ->
+                                        viewModel.evaluateSpeakingPractice(s.english, spoken)
+                                    }
+                                )
+                            }
+                        }
+                    )
+                }
+            } else {
+                // SINGLE PAGE VIEW MODE (Also 100% free of gesture blockers so vertical scrolling works!)
+                val safePageIdx = currentPageIndex.coerceIn(0, (totalPageCount - 1).coerceAtLeast(0))
+                val activeCoursePage = if (!isCustomPdf && safePageIdx in activeBookPages.indices) {
+                    activeBookPages[safePageIdx]
+                } else {
+                    null
+                }
+
+                item(key = "single_page_nav_bar") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(
+                            onClick = { if (safePageIdx > 0) onSelectPage(safePageIdx - 1) },
+                            enabled = safePageIdx > 0,
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous", modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("முந்தைய", fontSize = 11.sp)
+                        }
+
+                        Text(
+                            text = "📄 பக்கம் ${safePageIdx + 1} / $totalPageCount",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 13.5.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        OutlinedButton(
+                            onClick = { if (safePageIdx < totalPageCount - 1) onSelectPage(safePageIdx + 1) },
+                            enabled = safePageIdx < totalPageCount - 1,
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("அடுத்த", fontSize = 11.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+
+                item(key = "single_pdf_page_card_$safePageIdx") {
+                    LazyPdfPageItemCard(
+                        pdfFile = pdfFile,
+                        pageIndex = safePageIdx,
+                        totalPageCount = totalPageCount,
+                        coursePage = activeCoursePage,
+                        zoomScale = zoomScale,
+                        isSentencesExpanded = true,
+                        onToggleSentences = {},
+                        onSpeakPage = { pg ->
+                            val engSpeech = pg.titleEnglish + ". " +
+                                pg.sentences.joinToString(". ") { it.english }
+                            val tamSpeech = pg.titleTamil + ". " +
+                                pg.introExplanationTamil + ". " +
+                                pg.sentences.joinToString(". ") { it.tamilMeaning }
+                            viewModel.voiceManager.speakBilingual(engSpeech, tamSpeech)
+                        },
+                        onStartPageRoleplay = { pg ->
+                            val firstSentence = pg.sentences.firstOrNull()
+                            val scenario = RoleplayScenario(
+                                id = "pdf_page_${pg.pageNumber}",
+                                title = pg.titleEnglish,
+                                titleTamil = pg.titleTamil,
+                                botRole = "Dhanam Teacher (தனம் டீச்சர்)",
+                                userRole = "Student Subiksha (Subi, Age 9 / சுபிக்சா)",
+                                starterMessage = firstSentence?.english
+                                    ?: "Let's practice ${pg.titleEnglish}, Subi!",
+                                starterTamil = firstSentence?.tamilMeaning
+                                    ?: "வா சுபி! ${pg.titleTamil} பாடத்தைப் பேசிப் பழகுவோம்."
+                            )
+                            viewModel.startScenario(scenario)
+                            onStartRoleplay(scenario)
+                        },
+                        isListening = isListening,
+                        practicingSentence = practicingSentence,
+                        partialSpeechText = partialSpeechText,
+                        onSpeakBoth = { s ->
+                            viewModel.voiceManager.speakBilingual(s.english, s.tamilMeaning)
+                        },
+                        onSpeakEnglish = { s ->
+                            viewModel.voiceManager.speakEnglish(s.english)
+                        },
+                        onSpeakTamil = { s ->
+                            viewModel.voiceManager.speakTamil(s.tamilMeaning)
+                        },
+                        onToggleSentencePractice = { s ->
+                            if (isListening && practicingSentence == s.english) {
+                                viewModel.voiceManager.stopListening()
+                            } else {
+                                practicingSentence = s.english
+                                viewModel.voiceManager.startListening(
+                                    languageCode = "en-IN",
+                                    onResult = { spoken ->
+                                        viewModel.evaluateSpeakingPractice(s.english, spoken)
+                                    }
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(56.dp)) }
+        }
+
+        // Floating Up / Down Scroll Helper Buttons on Right Edge for 1-Tap Vertical Scrolling (மேலே / கீழே)
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 12.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SmallFloatingActionButton(
+                onClick = {
+                    coroutineScope.launch {
+                        lazyListState.animateScrollBy(-680f)
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp),
+                modifier = Modifier.testTag("pdf_scroll_up_fab")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowUpward,
+                    contentDescription = "Scroll Up (மேலே செல்)"
                 )
             }
 
-            items(activeCoursePage.sentences) { sentence ->
-                PdfSentenceInteractiveCard(
-                    sentence = sentence,
-                    isPracticing = isListening && practicingSentence == sentence.english,
-                    partialSpeechText = partialSpeechText,
-                    onSpeakBoth = {
-                        viewModel.voiceManager.speakBilingual(sentence.english, sentence.tamilMeaning)
-                    },
-                    onSpeakEnglish = {
-                        viewModel.voiceManager.speakEnglish(sentence.english)
-                    },
-                    onSpeakTamil = {
-                        viewModel.voiceManager.speakTamil(sentence.tamilMeaning)
-                    },
-                    onTogglePractice = {
-                        if (isListening && practicingSentence == sentence.english) {
-                            viewModel.voiceManager.stopListening()
-                        } else {
-                            practicingSentence = sentence.english
-                            viewModel.voiceManager.startListening(
-                                languageCode = "en-IN",
-                                onResult = { spoken ->
-                                    viewModel.evaluateSpeakingPractice(sentence.english, spoken)
-                                }
-                            )
-                        }
+            SmallFloatingActionButton(
+                onClick = {
+                    coroutineScope.launch {
+                        lazyListState.animateScrollBy(680f)
                     }
+                },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp),
+                modifier = Modifier.testTag("pdf_scroll_down_fab")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowDownward,
+                    contentDescription = "Scroll Down (கீழே செல்)"
                 )
             }
         }
-
-        item { Spacer(modifier = Modifier.height(24.dp)) }
     }
+}
+
+@Composable
+fun LazyPdfPageItemCard(
+    pdfFile: File?,
+    pageIndex: Int,
+    totalPageCount: Int,
+    coursePage: PdfCoursePage?,
+    zoomScale: Float,
+    isSentencesExpanded: Boolean,
+    onToggleSentences: () -> Unit,
+    onSpeakPage: (PdfCoursePage) -> Unit,
+    onStartPageRoleplay: (PdfCoursePage) -> Unit,
+    isListening: Boolean,
+    practicingSentence: String?,
+    partialSpeechText: String,
+    onSpeakBoth: (PdfCourseSentence) -> Unit,
+    onSpeakEnglish: (PdfCourseSentence) -> Unit,
+    onSpeakTamil: (PdfCourseSentence) -> Unit,
+    onToggleSentencePractice: (PdfCourseSentence) -> Unit
+) {
+    val pageBitmap by produceState<Bitmap?>(initialValue = null, pdfFile, pageIndex) {
+        val activeFile = pdfFile
+        if (activeFile != null) {
+            value = withContext(Dispatchers.IO) {
+                CoursePdfGenerator.renderPdfPageToBitmap(activeFile, pageIndex)
+            }
+        }
+    }
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+            .testTag("pdf_page_canvas_card_$pageIndex")
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Page Top Bar with Page Number + Teacher Audio Read Aloud Button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "📄 PDF பக்கம் ${pageIndex + 1} / $totalPageCount" +
+                            (coursePage?.let { " • ${it.dayRange}" } ?: ""),
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 12.5.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (coursePage != null) {
+                        Text(
+                            text = coursePage.titleTamil,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
+                }
+
+                if (coursePage != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { onSpeakPage(coursePage) }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.School,
+                                    contentDescription = "Read Page",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "🔊 வாசி",
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            modifier = Modifier.clickable { onStartPageRoleplay(coursePage) }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.RecordVoiceOver,
+                                    contentDescription = "Roleplay",
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "பயில்",
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Rendered PDF Page Image — NO gesture blocker so vertical scrolling is 100% smooth!
+            if (zoomScale <= 1.01f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(794f / 1160f)
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (pageBitmap == null) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "PDF பக்கம் ${pageIndex + 1} தயாராகிறது...",
+                                fontSize = 12.sp,
+                                color = Color.DarkGray
+                            )
+                        }
+                    } else {
+                        Image(
+                            bitmap = pageBitmap!!.asImageBitmap(),
+                            contentDescription = "PDF Page ${pageIndex + 1}",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+            } else {
+                // When zoomed in (> 100%), use horizontalScroll so vertical scroll (LazyColumn) still works smoothly!
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val zoomedWidthDp = (350f * zoomScale).dp
+                    Box(
+                        modifier = Modifier
+                            .width(zoomedWidthDp)
+                            .aspectRatio(794f / 1160f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (pageBitmap != null) {
+                            Image(
+                                bitmap = pageBitmap!!.asImageBitmap(),
+                                contentDescription = "PDF Page ${pageIndex + 1} Zoomed",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Expandable / Inline Interactive Speaking Cards for this Page
+            if (coursePage != null && coursePage.sentences.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onToggleSentences() },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "🎤 பக்கம் ${coursePage.pageNumber} ஆடியோ & உச்சரிப்பு வாக்கியங்கள் (${coursePage.sentences.size})",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Text(
+                                text = if (isSentencesExpanded) "சுருக்கு ▲" else "திற ▼",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    if (isSentencesExpanded) {
+                        coursePage.sentences.forEach { sentence ->
+                            PdfSentenceInteractiveCard(
+                                sentence = sentence,
+                                isPracticing = isListening && practicingSentence == sentence.english,
+                                partialSpeechText = partialSpeechText,
+                                onSpeakBoth = { onSpeakBoth(sentence) },
+                                onSpeakEnglish = { onSpeakEnglish(sentence) },
+                                onSpeakTamil = { onSpeakTamil(sentence) },
+                                onTogglePractice = { onToggleSentencePractice(sentence) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PdfDownloadSuccessDialog(
+    savedResult: SavedPdfResult,
+    onDismiss: () -> Unit,
+    onOpenPdfExternally: () -> Unit,
+    onSaveToCustomFolder: () -> Unit,
+    onSharePdf: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = "PDF Downloaded",
+                tint = Color(0xFF059669),
+                modifier = Modifier.size(42.dp)
+            )
+        },
+        title = {
+            Text(
+                text = "✅ PDF புத்தகம் டவுன்லோடு ஆனது!",
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 17.sp,
+                textAlign = TextAlign.Center
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "உங்கள் 'Spoken English via Tamil' PDF பாடப்புத்தகம் போனில் வெற்றிகரமாகச் சேமிக்கப்பட்டது.",
+                    fontSize = 13.sp
+                )
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(
+                            text = "📄 கோப்பு: ${savedResult.fileName}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                        Text(
+                            text = "📂 இடம்: ${savedResult.displayPath} (${savedResult.fileSizeKb} KB)",
+                            fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Button(
+                    onClick = onOpenPdfExternally,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(17.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("📂 டவுன்லோடு ஆன PDF-ஐத் திற (Open PDF)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
+                OutlinedButton(
+                    onClick = onSaveToCustomFolder,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.SaveAlt, contentDescription = null, modifier = Modifier.size(17.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("💾 வேறு ஃபோல்டரில் சேமி (Save As...)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
+                OutlinedButton(
+                    onClick = onSharePdf,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(17.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("📤 WhatsApp / Drive-ல் பகிர் (Share)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("மூடு (Close)", fontWeight = FontWeight.Bold)
+            }
+        }
+    )
 }
 
 @Composable
 private fun InteractivePdfCourseUnitsView(
     viewModel: MainViewModel,
+    pages: List<PdfCoursePage>,
     currentPageIndex: Int,
     onSelectPage: (Int) -> Unit,
     onOpenInPdfView: (Int) -> Unit,
     onStartRoleplay: (RoleplayScenario) -> Unit
 ) {
-    val pages = SpokenEnglishPdfCourseData.pages
     val safeIndex = currentPageIndex.coerceIn(pages.indices)
     val pageData = pages[safeIndex]
 
     var practicingSentence by remember { mutableStateOf<String?>(null) }
-    val practiceResult by viewModel.lastPracticeResult.collectAsState()
     val isListening by viewModel.voiceManager.isListening.collectAsState()
     val partialSpeechText by viewModel.voiceManager.partialSpeechText.collectAsState()
 
@@ -1145,12 +1706,10 @@ private fun InteractivePdfCourseUnitsView(
 
 @Composable
 private fun PdfTableOfContentsView(
-    viewModel: MainViewModel,
+    pages: List<PdfCoursePage>,
     onJumpToPdfPage: (Int) -> Unit,
     onJumpToInteractivePage: (Int) -> Unit
 ) {
-    val pages = SpokenEnglishPdfCourseData.pages
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -1165,7 +1724,7 @@ private fun PdfTableOfContentsView(
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text(
-                        text = "📑 முழுப் பாடத்திட்டப் பொருளடக்கம் (18 PDF Pages)",
+                        text = "📑 முழுப் பாடத்திட்டப் பொருளடக்கம் (${pages.size} PDF Pages)",
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -1256,7 +1815,7 @@ private fun PdfTableOfContentsView(
 }
 
 @Composable
-private fun PdfSentenceInteractiveCard(
+fun PdfSentenceInteractiveCard(
     sentence: PdfCourseSentence,
     isPracticing: Boolean,
     partialSpeechText: String,
@@ -1267,10 +1826,10 @@ private fun PdfSentenceInteractiveCard(
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1279,7 +1838,7 @@ private fun PdfSentenceInteractiveCard(
                 Text(
                     text = sentence.english,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
+                    fontSize = 14.5.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
@@ -1320,14 +1879,14 @@ private fun PdfSentenceInteractiveCard(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "🗣️ உச்சரிப்பு: ${sentence.tamilPronunciation}",
-                fontSize = 12.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = "🇮🇳 தமிழ் அர்த்தம்: ${sentence.tamilMeaning}",
-                fontSize = 13.5.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1363,7 +1922,7 @@ private fun PdfSentenceInteractiveCard(
                     } else {
                         "🎤 Speak & Test Pronunciation (பேசிப் பழகு)"
                     },
-                    fontSize = 12.5.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
