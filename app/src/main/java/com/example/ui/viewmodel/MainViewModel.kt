@@ -1,9 +1,11 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.ai.TutorEngine
+import com.example.data.api.GeminiModelOption
 import com.example.data.db.AppDatabase
 import com.example.data.db.ChatMessageEntity
 import com.example.data.db.PracticeStatEntity
@@ -14,10 +16,12 @@ import com.example.data.lessons.LessonPhrase
 import com.example.data.lessons.PronunciationExercise
 import com.example.data.lessons.RoleplayScenario
 import com.example.data.repository.AppRepository
-import com.example.voice.CurrentlySpeakingLanguage
+import com.example.util.SampleTextbookPage
+import com.example.util.TextbookImageHelper
 import com.example.voice.SttLanguage
 import com.example.voice.TtsMode
 import com.example.voice.VoiceManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +30,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class PracticeResult(
     val targetText: String,
@@ -51,17 +56,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val chatHistory: StateFlow<List<ChatMessageEntity>>
     val stats: StateFlow<PracticeStatEntity?>
 
+    private val _selectedGeminiModel = MutableStateFlow(GeminiModelOption.GEMINI_3_8_FLASH)
+    val selectedGeminiModel: StateFlow<GeminiModelOption> = _selectedGeminiModel.asStateFlow()
+
     private val _isBotThinking = MutableStateFlow(false)
     val isBotThinking: StateFlow<Boolean> = _isBotThinking.asStateFlow()
 
     private val _activeScenario = MutableStateFlow<RoleplayScenario?>(null)
     val activeScenario: StateFlow<RoleplayScenario?> = _activeScenario.asStateFlow()
 
+    // Textbook Photo / Camera State
+    private val _attachedImagePath = MutableStateFlow<String?>(null)
+    val attachedImagePath: StateFlow<String?> = _attachedImagePath.asStateFlow()
+
+    private val _attachedSamplePage = MutableStateFlow<SampleTextbookPage?>(null)
+    val attachedSamplePage: StateFlow<SampleTextbookPage?> = _attachedSamplePage.asStateFlow()
+
+    // Remembering the last analyzed textbook photo in session so follow-up voice/text questions can refer to it
+    private val _lastAnalyzedImagePath = MutableStateFlow<String?>(null)
+    val lastAnalyzedImagePath: StateFlow<String?> = _lastAnalyzedImagePath.asStateFlow()
+
+    private val _lastAnalyzedSamplePage = MutableStateFlow<SampleTextbookPage?>(null)
+
+    private val _openCameraSheetOnLaunch = MutableStateFlow(false)
+    val openCameraSheetOnLaunch: StateFlow<Boolean> = _openCameraSheetOnLaunch.asStateFlow()
+
     // Voice Call Mode
     private val _isCallActive = MutableStateFlow(false)
     val isCallActive: StateFlow<Boolean> = _isCallActive.asStateFlow()
 
-    private val _callStatus = MutableStateFlow("Tap mic to speak with Dhanam Teacher")
+    private val _callStatus = MutableStateFlow("Tap mic to speak with Dhanam Teacher (Gemini 3.8 Flash)")
     val callStatus: StateFlow<String> = _callStatus.asStateFlow()
 
     // Interactive practice
@@ -120,6 +144,127 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         seedInitialGreetingIfNeeded()
     }
 
+    fun setGeminiModel(model: GeminiModelOption) {
+        _selectedGeminiModel.value = model
+    }
+
+    fun requestOpenCameraSheet() {
+        _openCameraSheetOnLaunch.value = true
+    }
+
+    fun consumeOpenCameraSheet() {
+        _openCameraSheetOnLaunch.value = false
+    }
+
+    fun attachCapturedCameraFile(filePath: String) {
+        _attachedImagePath.value = filePath
+        _attachedSamplePage.value = null
+    }
+
+    fun attachGalleryUri(uri: Uri) {
+        viewModelScope.launch {
+            val savedPath = withContext(Dispatchers.IO) {
+                TextbookImageHelper.copyUriToInternalFile(getApplication(), uri)
+            }
+            if (savedPath != null) {
+                _attachedImagePath.value = savedPath
+                _attachedSamplePage.value = null
+            }
+        }
+    }
+
+    fun attachSampleTextbookPage(samplePage: SampleTextbookPage, autoAnalyze: Boolean = false) {
+        viewModelScope.launch {
+            val savedPath = withContext(Dispatchers.IO) {
+                TextbookImageHelper.generateSampleTextbookBitmap(getApplication(), samplePage)
+            }
+            _attachedImagePath.value = savedPath
+            _attachedSamplePage.value = samplePage
+            if (autoAnalyze) {
+                sendTextbookPhotoQuestion(
+                    question = "இப்படத்தில் உள்ள பாடத்தை முழுமையாக விளக்கிச் சொல்லுங்கள் (Explain this textbook page clearly in Tamil and English)"
+                )
+            }
+        }
+    }
+
+    fun clearAttachedImage() {
+        _attachedImagePath.value = null
+        _attachedSamplePage.value = null
+    }
+
+    fun clearActiveTextbookContext() {
+        _attachedImagePath.value = null
+        _attachedSamplePage.value = null
+        _lastAnalyzedImagePath.value = null
+        _lastAnalyzedSamplePage.value = null
+    }
+
+    fun sendTextbookPhotoQuestion(
+        question: String = "",
+        imagePathOverride: String? = null,
+        samplePageOverride: SampleTextbookPage? = null,
+        autoSpeakReply: Boolean = true
+    ) {
+        val targetImagePath = imagePathOverride
+            ?: _attachedImagePath.value
+            ?: _lastAnalyzedImagePath.value
+            ?: return
+
+        val targetSamplePage = samplePageOverride
+            ?: _attachedSamplePage.value
+            ?: _lastAnalyzedSamplePage.value
+
+        val effectiveQuestion = question.trim().ifBlank {
+            "இப்படத்தில் உள்ள பாடத்தை விளக்கிச் சொல்லுங்கள் (Explain this textbook page step-by-step in English and Tamil)"
+        }
+
+        // Remember as active textbook image for follow-up doubts
+        _lastAnalyzedImagePath.value = targetImagePath
+        _lastAnalyzedSamplePage.value = targetSamplePage
+        // Clear pending attachment bar once sent into chat
+        _attachedImagePath.value = null
+        _attachedSamplePage.value = null
+
+        viewModelScope.launch {
+            val historySnapshot = chatHistory.value
+            val userMsg = ChatMessageEntity(
+                sender = "user",
+                englishText = "📷 $effectiveQuestion",
+                imagePath = targetImagePath
+            )
+            repository.addChatMessage(userMsg)
+            _isBotThinking.value = true
+
+            val tutorReply = TutorEngine.getTextbookPhotoReply(
+                userQuestion = effectiveQuestion,
+                imagePath = targetImagePath,
+                conversationHistory = historySnapshot,
+                preferredModel = _selectedGeminiModel.value
+            )
+
+            val botMsg = ChatMessageEntity(
+                sender = "bot",
+                englishText = tutorReply.englishText,
+                tamilText = tutorReply.tamilText,
+                tanglishText = tutorReply.tanglishText,
+                coachingTip = tutorReply.coachingTip
+            )
+            repository.addChatMessage(botMsg)
+            _isBotThinking.value = false
+
+            incrementWordsSpoken(effectiveQuestion.split(" ").size)
+
+            if (autoSpeakReply) {
+                voiceManager.speakBotResponse(
+                    englishText = tutorReply.englishText,
+                    tamilText = tutorReply.tamilText,
+                    messageId = null
+                )
+            }
+        }
+    }
+
     fun setupVoiceCallbacks() {
         voiceManager.onSpeechResult = { text ->
             if (_isCallActive.value) {
@@ -137,7 +282,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         voiceManager.onSpeakingComplete = {
             if (_isCallActive.value) {
-                _callStatus.value = "சுபியின் முறை! இப்போது பேசு சுபி..."
+                _callStatus.value = "சுபியின் முறை! இப்போது எதை வேண்டுமானாலும் கேள் சுபி..."
                 voiceManager.startListening(voiceManager.selectedSttLanguage.value.code)
             }
         }
@@ -173,10 +318,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 val greeting = ChatMessageEntity(
                     sender = "bot",
-                    englishText = "Hello Subiksha (Subi)! I am your Dhanam Teacher. You are a smart 9-year-old girl! Speak to me in Tamil or English anytime!",
-                    tamilText = "வணக்கம் சுபிக்சா (சுபி)! நான் உன் தனம் டீச்சர். என் 9 வயது சுட்டி மாணவி சுபி, என்னுடன் தயங்காமல் தமிழில் அல்லது ஆங்கிலத்தில் பேசு!",
-                    tanglishText = "ஹலோ சுபிக்சா (சுபி)! ஐ அம் யுவர் தனம் டீச்சர். யூ ஆர் எ ஸ்மார்ட் நைன் இயர் ஓல்ட் கேர்ள்!",
-                    coachingTip = "சுபி செல்லம், தவறுகளைப் பற்றி தயங்காமல் பேசு. தனம் டீச்சருடன் தினமும் பேசப் பேச ஆங்கிலம் சுலபமாக வரும்!"
+                    englishText = "Hello Subiksha (Subi)! I am your Dhanam Teacher powered by Gemini 3.8 Flash! Ask me anything or take a photo of your textbook (📷 Camera) to get instant explanations and clear your doubts in Tamil & English!",
+                    tamilText = "வணக்கம் சுபிக்சா (சுபி)! நான் Gemini 3.8 Flash சக்தியுடன் இயங்கும் உன் தனம் டீச்சர்! எந்தக் கேள்வியும் கேட்கலாம் அல்லது உன் பாடப்புத்தகத்தை 📷 கேமராவில் போட்டோ எடுத்து அதன் விளக்கம் மற்றும் சந்தேகங்களை உடனடியாகக் கேட்டுத் தெரிந்துகொள்ளலாம்!",
+                    tanglishText = "ஹலோ சுபிக்சா (சுபி)! ஐ அம் யுவர் தனம் டீச்சர் பவர்ட் பை ஜெமினி 3.8 ஃபிளாஷ்! டேக் எ போட்டோ ஆஃப் யுவர் டெக்ஸ்ட்புக் டு கிளியர் யுவர் டவுட்ஸ்!",
+                    coachingTip = "📷 புத்தகப் பக்கத்தை போட்டோ எடுக்க கீழே உள்ள கேமரா பட்டனை அழுத்தவும்!"
                 )
                 repository.addChatMessage(greeting)
             }
@@ -184,8 +329,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun sendUserMessage(text: String, autoSpeakReply: Boolean = true) {
+        // If user currently has an attached textbook photo, route the question (or empty tap) to textbook photo analysis
+        if (_attachedImagePath.value != null) {
+            sendTextbookPhotoQuestion(question = text, autoSpeakReply = autoSpeakReply)
+            return
+        }
         if (text.isBlank()) return
         viewModelScope.launch {
+            val historySnapshot = chatHistory.value
             val userMsg = ChatMessageEntity(
                 sender = "user",
                 englishText = text
@@ -193,7 +344,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.addChatMessage(userMsg)
             _isBotThinking.value = true
 
-            val tutorReply = TutorEngine.getTutorReply(text, _activeScenario.value?.id)
+            val tutorReply = TutorEngine.getTutorReply(
+                userMessage = text,
+                contextScenario = _activeScenario.value?.id,
+                conversationHistory = historySnapshot,
+                preferredModel = _selectedGeminiModel.value
+            )
             val botMsg = ChatMessageEntity(
                 sender = "bot",
                 englishText = tutorReply.englishText,
@@ -262,11 +418,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Live Call Mode
     fun startCallMode() {
         _isCallActive.value = true
-        _callStatus.value = "தனம் டீச்சர் இணைப்பில் உள்ளார்... வணக்கம் சொல்லு சுபி!"
+        _callStatus.value = "⚡ Gemini 3.8 Flash • தனம் டீச்சர் இணைப்பில் உள்ளார்... எதை வேண்டுமானாலும் கேள் சுபி!"
         val (welcomeEng, welcomeTam) = if (_activeScenario.value != null) {
             _activeScenario.value!!.starterMessage to _activeScenario.value!!.starterTamil
         } else {
-            "Hello Subiksha (Subi)! Dhanam Teacher is ready to talk with you. How are you today, Subi?" to "வணக்கம் சுபிக்சா (சுபி)! தனம் டீச்சர் உன்னுடன் பேசத் தயாராக இருக்கிறேன். சுபி இன்று எப்படி இருக்கிறாய்?"
+            "Hello Subiksha (Subi)! Dhanam Teacher with Gemini 3.8 Flash is ready. Ask me any question in Tamil or English!" to "வணக்கம் சுபிக்சா (சுபி)! Gemini 3.8 Flash உடன் தனம் டீச்சர் தயாராக இருக்கிறேன். எந்தக் கேள்வியும் தமிழில் அல்லது ஆங்கிலத்தில் கேள் சுபி!"
         }
         voiceManager.speakBotResponse(welcomeEng, welcomeTam)
     }
@@ -280,10 +436,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun handleUserVoiceInputInCall(text: String) {
         viewModelScope.launch {
-            _callStatus.value = "சுபி பேசியது: \"$text\""
+            _callStatus.value = "சுபி கேட்டது: \"$text\""
             _isBotThinking.value = true
 
-            val reply = TutorEngine.getTutorReply(text, _activeScenario.value?.id)
+            val historySnapshot = chatHistory.value
+            val reply = TutorEngine.getTutorReply(
+                userMessage = text,
+                contextScenario = _activeScenario.value?.id,
+                conversationHistory = historySnapshot,
+                preferredModel = _selectedGeminiModel.value
+            )
             val userMsg = ChatMessageEntity(sender = "user", englishText = text)
             val botMsg = ChatMessageEntity(
                 sender = "bot",
@@ -296,7 +458,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.addChatMessage(botMsg)
 
             _isBotThinking.value = false
-            _callStatus.value = "தனம் டீச்சர் பதிலளிக்கிறார்..."
+            _callStatus.value = "⚡ ${_selectedGeminiModel.value.displayName} பதிலளிக்கிறது..."
             voiceManager.speakBotResponse(
                 englishText = reply.englishText,
                 tamilText = reply.tamilText
@@ -334,7 +496,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (tamilInput.isBlank()) return
         viewModelScope.launch {
             _isTranslating.value = true
-            val res = TutorEngine.translateTamilToEnglish(tamilInput)
+            val res = TutorEngine.translateTamilToEnglish(tamilInput, _selectedGeminiModel.value)
             _howToSayResult.value = HowToSayResult(
                 casual = res["casual"].orEmpty(),
                 formal = res["formal"].orEmpty(),
@@ -395,6 +557,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearChat() {
         viewModelScope.launch {
+            clearActiveTextbookContext()
             repository.clearChat()
             seedInitialGreetingIfNeeded()
         }

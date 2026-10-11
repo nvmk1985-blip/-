@@ -141,9 +141,9 @@ fun VoiceCallScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Live English Voice Session",
+                        text = "⚡ Gemini 3.8 Flash • எதை கேட்டாலும் பதிலளிக்கும் Live Call",
                         color = Color.White,
-                        fontSize = 12.sp,
+                        fontSize = 11.5.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -157,10 +157,11 @@ fun VoiceCallScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Dhanam Teacher (தனம்)",
+                text = "Dhanam Teacher (தனம்) • Gemini 3.8 Flash",
                 color = Color.White,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
             )
             Text(
                 text = "Student: Subiksha (Subi, Age 9) • சுபிக்சா (சுபி)",
@@ -320,10 +321,12 @@ fun VoiceCallScreen(
         ) {
             // Quick suggested conversation prompts
             val suggestedPrompts = listOf(
-                "Hello Dhanam Teacher!",
-                "My name is Subiksha (Subi), I am 9 years old",
-                "Teach me a story, Dhanam Teacher",
-                "வணக்கம் தனம் டீச்சர்!"
+                "Why is the sky blue? வானம் ஏன் நீலம்?",
+                "What is photosynthesis? ஒளிச்சேர்க்கை",
+                "15 multiplied by 12 என்ன?",
+                "Tell me the Lion and Mouse story",
+                "Tell me about Dr. Abdul Kalam",
+                "Ask me a fun riddle (விடுகதை)"
             )
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

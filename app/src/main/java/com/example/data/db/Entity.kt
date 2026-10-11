@@ -24,6 +24,7 @@ data class ChatMessageEntity(
     val tamilText: String = "",
     val tanglishText: String = "",
     val coachingTip: String = "",
+    val imagePath: String = "",
     val timestamp: Long = System.currentTimeMillis()
 )
 

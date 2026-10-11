@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Coffee
 import androidx.compose.material.icons.filled.DirectionsBus
@@ -314,7 +315,64 @@ fun HomeScreen(
             }
         }
 
-        // "How to say in English?" Instant helper banner
+        // Textbook Camera Photo Explanation & Doubt Solver Card
+        item {
+            Card(
+                onClick = {
+                    viewModel.requestOpenCameraSheet()
+                    onNavigateToBot()
+                },
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF4F46E5)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("home_textbook_camera_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.White.copy(alpha = 0.2f),
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = "Textbook Camera Doubt Solver",
+                                tint = Color(0xFFFDE68A),
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "📷 பாடப்புத்தக போட்டோ & சந்தேகம்",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "புத்தகப் பக்கத்தை போட்டோ எடுத்து தமிழ் & ஆங்கில விளக்கம், உச்சரிப்பு மற்றும் சந்தேகம் கேட்கலாம்!",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.92f)
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Open Textbook Camera",
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+
         // Spoken English via Tamil - Complete 30-Day PDF Course Book Card
         item {
             Card(
