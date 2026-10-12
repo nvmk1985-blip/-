@@ -88,18 +88,53 @@ object UniversalKnowledgeEngine {
             tip = "Thirukkural is called the 'Universal Veda' (உலகப் பொதுமறை) in English!"
         ),
         KnowledgeEntry(
-            keywords = listOf("india", "capital of india", "national animal", "national bird", "இந்தியா", "தலைநகரம்", "தேசிய விலங்கு", "தேசிய பறவை", "prime minister"),
+            keywords = listOf("capital of india", "national animal", "national bird", "இந்தியாவின் தலைநகரம்", "தேசிய விலங்கு", "தேசிய பறவை"),
             english = "New Delhi is the capital of India! India's national animal is the Royal Bengal Tiger, national bird is the Peacock, national flower is the Lotus, and national river is the Ganga.",
             tamil = "இந்தியாவின் தலைநகரம் புது டெல்லி (New Delhi)! இந்தியாவின் தேசிய விலங்கு வங்காளப் புலி (Tiger), தேசியப் பறவை மயில் (Peacock), தேசிய மலர் தாமரை (Lotus), தேசிய நதி கங்கை ஆகும்!",
             tanglish = "நியூ டெல்லி இஸ் தி கேப்பிட்டல் ஆஃப் இந்தியா! இந்தியாஸ் நேஷனல் அனிமல் இஸ் தி பெங்கால் டைகர், அண்ட் நேஷனல் பேர்ட் இஸ் தி பீகாக்.",
             tip = "Capital = தலைநகரம், National Anthem = தேசிய கீதம் (ஜன கண மன), National Song = வந்தே மாதரம்."
         ),
         KnowledgeEntry(
-            keywords = listOf("tamil nadu", "chennai", "தமிழ்நாடு", "சென்னை", "state animal", "state bird"),
+            keywords = listOf("capital of tamil nadu", "state animal", "state bird", "தமிழ்நாட்டின் தலைநகரம்", "மாநில விலங்கு", "மாநில பறவை"),
             english = "Chennai is the capital of Tamil Nadu! Tamil Nadu's state animal is the Nilgiri Tahr (வரையாடு), state bird is the Emerald Dove (மரகதப் புறா), state tree is the Palm Tree (பனை மரம்), and state sport is Kabaddi!",
             tamil = "தமிழ்நாட்டின் தலைநகரம் சென்னை! தமிழ்நாட்டின் மாநில விலங்கு நீலகிரி வரையாடு, மாநிலப் பறவை மரகதப் புறா, மாநில மரம் பனை மரம், மாநில விளையாட்டு கபடி ஆகும்!",
             tanglish = "சென்னை இஸ் தி கேப்பிட்டல் ஆஃப் தமிழ்நாடு! தமிழ்நாடுஸ் ஸ்டேட் அனிமல் இஸ் தி நீலகிரி தார் அண்ட் ஸ்டேட் ட்ரீ இஸ் தி பாம் ட்ரீ.",
             tip = "'I am proud to be from Tamil Nadu' என்றால் 'நான் தமிழ்நாட்டைச் சேர்ந்தவன் என்பதில் பெருமை கொள்கிறேன்' என்று பொருள்."
+        ),
+        KnowledgeEntry(
+            keywords = listOf("kamarajar", "kamaraj", "காமராஜர்", "கர்மவீரர்", "கல்வி கண் திறந்த"),
+            english = "K. Kamarajar, known as 'Karmaveerar' and 'Kalvi Kan Thirantha Kamarajar', was the former Chief Minister of Tamil Nadu who introduced the free Midday Meal Scheme and opened thousands of schools across villages!",
+            tamil = "'கர்மவீரர்' மற்றும் 'கல்விக் கண் திறந்த காமராஜர்' எனப் போற்றப்படும் கு. காமராஜர், தமிழ்நாட்டின் முன்னாள் முதலமைச்சர் ஆவார். ஏழைக் குழந்தைகள் படிக்க இலவச மதிய உணவுத் திட்டத்தையும் ஆயிரக்கணக்கான பள்ளிகளையும் உருவாக்கினார்!",
+            tanglish = "காமராஜர், நோன் அஸ் கர்மவீரர், வாஸ் தி ஃபார்மர் சீஃப் மினிஸ்டர் ஆஃப் தமிழ்நாடு ஹூ இன்ட்ரடியூஸ்டு தி ஃப்ரீ மிட்டே மீல் ஸ்கீம்!",
+            tip = "ஜூலை 15-ஆம் தேதி காமராஜரின் பிறந்தநாள் தமிழ்நாட்டில் 'கல்வி வளர்ச்சி நாள்' (Educational Development Day) ஆகக் கொண்டாடப்படுகிறது!"
+        ),
+        KnowledgeEntry(
+            keywords = listOf("bharathiyar", "subramania bharathi", "பாரதியார்", "மகாகவி"),
+            english = "Mahakavi Subramania Bharathiyar was a legendary Tamil poet, freedom fighter, and social reformer who wrote inspiring patriotic songs like 'Achamillai Achamillai' and 'Odi Vilaiyadu Papa'!",
+            tamil = "மகாகவி சுப்பிரமணிய பாரதியார் இந்திய விடுதலைப் போராட்ட வீரரும் மாபெரும் தமிழ்க் கவிஞரும் ஆவார். 'அச்சமில்லை அச்சமில்லை', 'ஓடி விளையாடு பாப்பா' போன்ற எழுச்சிமிகு பாடல்களைப் பாடியவர்!",
+            tanglish = "மகாகவி சுப்பிரமணிய பாரதியார் வாஸ் எ லெஜண்டரி தமிழ் போயட் அண்ட் ஃப்ரீடம் ஃபைட்டர்!",
+            tip = "Poet = கவிஞர், Freedom Fighter = சுதந்திரப் போராட்ட வீரர்."
+        ),
+        KnowledgeEntry(
+            keywords = listOf("mahatma gandhi", "gandhiji", "மகாத்மா காந்தி", "காந்திஜி", "father of our nation", "தேசப்பிதா"),
+            english = "Mahatma Gandhi (Mohandas Karamchand Gandhi) is the Father of our Nation, India. Born on October 2, 1869, he led India to independence through truth (Satyagraha) and non-violence (Ahimsa)!",
+            tamil = "மகாத்மா காந்தி (மோகன்தாஸ் கரம்சந்த் காந்தி) நமது இந்தியாவின் தேசப்பிதா (Father of the Nation) ஆவார். அக்டோபர் 2, 1869-இல் பிறந்த இவர், உண்மை (சத்தியாகிரகம்) மற்றும் அகிம்சை வழியில் இந்தியாவிற்குச் சுதந்திரம் பெற்றுத் தந்தார்!",
+            tanglish = "மகாத்மா காந்தி இஸ் தி ஃபாதர் ஆஃப் அவர் நேஷன், இந்தியா. ஹி லெட் இந்தியா டு இன்டிபென்டன்ஸ் த்ரூ ட்ரூத் அண்ட் நான்-வயலன்ஸ்!",
+            tip = "Non-violence = அகிம்சை, Independence = சுதந்திரம், Truth = உண்மை."
+        ),
+        KnowledgeEntry(
+            keywords = listOf("computer", "what is computer", "கம்ப்யூட்டர்", "கணினி என்றால் என்ன", "கணினி"),
+            english = "A computer is a smart electronic machine that takes input data, processes it quickly using its CPU (brain of the computer), and gives accurate output. Charles Babbage is called the Father of the Computer!",
+            tamil = "கணினி (Computer) என்பது தகவல்களை உள்ளீடாகப் (Input) பெற்று, அதிவேகமாகச் செயல்படுத்தி (Process), துல்லியமான வெளியீட்டைத் (Output) தரும் மின்னணு இயந்திரமாகும். சார்லஸ் பாபேஜ் கணினியின் தந்தை எனப்படுகிறார்!",
+            tanglish = "எ கம்ப்யூட்டர் இஸ் எ ஸ்மார்ட் எலக்ட்ரானிக் மெஷின் தட் டேக்ஸ் இன்புட் டேட்டா அண்ட் கிவ்ஸ் அக்யூரேட் அவுட்புட். சார்லஸ் பாபேஜ் இஸ் தி ஃபாதர் ஆஃப் தி கம்ப்யூட்டர்!",
+            tip = "CPU = Central Processing Unit (கணினியின் மூளை), RAM = Random Access Memory."
+        ),
+        KnowledgeEntry(
+            keywords = listOf("artificial intelligence", "what is ai", "செயற்கை நுண்ணறிவு"),
+            english = "Artificial Intelligence (AI) is computer technology that enables machines to think, learn, understand languages, analyze photos, and solve problems like humans — just like Gemini 3.8 Flash!",
+            tamil = "செயற்கை நுண்ணறிவு (Artificial Intelligence - AI) என்பது மனிதர்களைப் போலவே சிந்திக்கவும், மொழிகளைப் புரிந்துகொள்ளவும், படங்களை ஆராய்ந்து கேள்விகளுக்குப் பதிலளிக்கவும் கணினிகளுக்கு உதவும் நவீன தொழில்நுட்பமாகும்!",
+            tanglish = "ஆர்டிஃபிஷியல் இன்டெலிஜென்ஸ் இஸ் கம்ப்யூட்டர் டெக்னாலஜி தட் எனேபிள்ஸ் மெஷின்ஸ் டு திங்க், லேர்ன், அண்ட் சால்வ் பிராப்ளம்ஸ் லைக் ஹியூமன்ஸ்!",
+            tip = "AI என்பதன் விரிவாக்கம்: Artificial Intelligence (செயற்கை நுண்ணறிவு)."
         ),
 
         // --- ENGLISH GRAMMAR & TENSES ---
@@ -120,7 +155,7 @@ object UniversalKnowledgeEngine {
 
         // --- STORIES, RIDDLES & SPEECHES ---
         KnowledgeEntry(
-            keywords = listOf("lion and mouse", "lion story", "சிங்கம்", "எலி கதை", "moral story", "நீதிக்கதை", "tell me a story", "கதை சொல்"),
+            keywords = listOf("lion and mouse", "lion story", "சிங்கம் மற்றும் எலி", "எலி கதை", "moral story", "நீதிக்கதை", "tell me a story", "கதை சொல்"),
             english = "Story: The Lion and the Mouse! Once a sleeping lion caught a tiny mouse. The mouse begged, 'Please forgive me, I may help you one day!' Later, the lion was trapped in a hunter's net. The little mouse chewed the ropes and set the lion free! Moral: Even a small friend can be a big help.",
             tamil = "கதை: சிங்கமும் சுண்டெலியும்! ஒரு காட்டில் தூங்கிக்கொண்டிருந்த சிங்கத்தின் மீது சிறிய எலி ஓடியது. சிங்கம் அதைப் பிடித்தபோது, 'என்னை விட்டுவிடுங்கள், ஒருநாள் நான் உங்களுக்கு உதவுவேன்' என்றது எலி. சில நாட்களில் சிங்கம் வேடன் வலையில் சிக்கியது. உடனே அந்தச் சுண்டெலி வலையைக் கடித்து சிங்கத்தைக் காப்பாற்றியது! நீதி: சிறியவர்களின் உதவியும் பெரிய நன்மையைத் தரும்.",
             tanglish = "ஸ்டோரி: தி லயன் அண்ட் தி மவுஸ்! தி லிட்டில் மவுஸ் சியூட் தி ரோப்ஸ் அண்ட் செட் தி லயன் ஃப்ரீ! மாரல்: ஈவன் எ ஸ்மால் ஃப்ரெண்ட் கேன் பீ எ பிக் ஹெல்ப்.",
@@ -149,7 +184,7 @@ object UniversalKnowledgeEngine {
         )
     )
 
-    // Rich Bilingual Dictionary for instant word/phrase lookup
+    // Rich Bilingual Dictionary for single-word lookup
     private val bilingualDictionary: Map<String, Pair<String, String>> = mapOf(
         "மழை" to ("Rain" to "It is raining outside. (வெளியே மழை பெய்கிறது.)"),
         "வெயில்" to ("Sunny / Sunshine" to "It is very sunny today. (இன்று வெயில் அதிகமாக உள்ளது.)"),
@@ -220,17 +255,20 @@ object UniversalKnowledgeEngine {
             }
         }
 
-        // 4. Check Bilingual Dictionary lookup
-        for ((tamilWord, pair) in bilingualDictionary) {
-            val (engWord, sample) = pair
-            if (cleaned.contains(tamilWord) || lower == engWord.lowercase().substringBefore(" /")) {
-                val eng = "In English, '$tamilWord' is called '$engWord'. Example sentence: $sample"
-                return TutorResponse(
-                    englishText = eng,
-                    tamilText = "'$tamilWord' என்பதை ஆங்கிலத்தில் '$engWord' என்று சொல்வார்கள். வாக்கிய உதாரணம்: $sample",
-                    tanglishText = TutorEngine.formatPronunciationInTamil(eng, ""),
-                    coachingTip = "புதிய வார்த்தையைக் கற்கும்போது அதைத் தனியாகப் படிக்காமல், இதுபோல் ஒரு முழு வாக்கியத்தில் (Full Sentence) வைத்துப் பேசிப் பழகுங்கள்!"
-                )
+        // 4. Check Bilingual Dictionary lookup ONLY for single-word queries so full sentences/questions go to LiveWebKnowledgeEngine
+        val words = cleaned.replace("?", "").trim().split(Regex("\\s+"))
+        if (words.size <= 2) {
+            for ((tamilWord, pair) in bilingualDictionary) {
+                val (engWord, sample) = pair
+                if (cleaned == tamilWord || lower == engWord.lowercase().substringBefore(" /")) {
+                    val eng = "In English, '$tamilWord' is called '$engWord'. Example sentence: $sample"
+                    return TutorResponse(
+                        englishText = eng,
+                        tamilText = "'$tamilWord' என்பதை ஆங்கிலத்தில் '$engWord' என்று சொல்வார்கள். வாக்கிய உதாரணம்: $sample",
+                        tanglishText = TutorEngine.formatPronunciationInTamil(eng, ""),
+                        coachingTip = "புதிய வார்த்தையைக் கற்கும்போது அதைத் தனியாகப் படிக்காமல், இதுபோல் ஒரு முழு வாக்கியத்தில் (Full Sentence) வைத்துப் பேசிப் பழகுங்கள்!"
+                    )
+                }
             }
         }
 

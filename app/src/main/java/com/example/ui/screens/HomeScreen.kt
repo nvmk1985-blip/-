@@ -116,7 +116,7 @@ fun HomeScreen(
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
-                                        text = "👩‍🏫 தனம் டீச்சர் • மாணவி: சுபிக்சா (சுபி, 9 வயது)",
+                                        text = "⚡ Gemini 3.8 Flash • 👩‍🏫 தனம் டீச்சர் (சுபி, 9 வயது)",
                                         color = Color.White,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
@@ -125,13 +125,13 @@ fun HomeScreen(
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "Hi Subiksha (Subi)! 🌟\nLearn with Dhanam Teacher",
+                                    text = "Hi Subiksha (Subi)! 🌟\nDhanam Teacher (Gemini 3.8 Flash)",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                                 Text(
-                                    text = "சுபி பாப்பாவுக்காக தமிழ் வழியே எளிய ஆங்கிலப் பயிற்சி",
+                                    text = "எதை கேட்டாலும் பதிலளிக்கும் AI Voice Bot & தமிழ் வழி ஆங்கிலப் பயிற்சி",
                                     fontSize = 13.sp,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                                 )
@@ -177,7 +177,7 @@ fun HomeScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Call Dhanam", fontWeight = FontWeight.Bold)
+                                Text("Call 3.8 Flash", fontWeight = FontWeight.Bold)
                             }
 
                             Button(
@@ -193,7 +193,7 @@ fun HomeScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Ask Dhanam", fontWeight = FontWeight.Bold)
+                                Text("Ask Anything", fontWeight = FontWeight.Bold)
                             }
                         }
                     }

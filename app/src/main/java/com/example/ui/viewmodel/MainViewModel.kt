@@ -308,20 +308,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun seedInitialGreetingIfNeeded() {
         viewModelScope.launch {
             val currentMessages = repository.chatMessages.first()
-            val hasOldMalarGreeting = currentMessages.size == 1 &&
+            val hasOldGreeting = currentMessages.size == 1 &&
                 (currentMessages.first().englishText.contains("Malar", ignoreCase = true) ||
-                    currentMessages.first().tamilText.contains("மலர்"))
+                    currentMessages.first().tamilText.contains("மலர்") ||
+                    !currentMessages.first().englishText.contains("Gemini 3.8 Flash", ignoreCase = true))
 
-            if (currentMessages.isEmpty() || hasOldMalarGreeting) {
-                if (hasOldMalarGreeting) {
+            if (currentMessages.isEmpty() || hasOldGreeting) {
+                if (hasOldGreeting) {
                     repository.clearChat()
                 }
                 val greeting = ChatMessageEntity(
                     sender = "bot",
-                    englishText = "Hello Subiksha (Subi)! I am your Dhanam Teacher powered by Gemini 3.8 Flash! Ask me anything or take a photo of your textbook (📷 Camera) to get instant explanations and clear your doubts in Tamil & English!",
-                    tamilText = "வணக்கம் சுபிக்சா (சுபி)! நான் Gemini 3.8 Flash சக்தியுடன் இயங்கும் உன் தனம் டீச்சர்! எந்தக் கேள்வியும் கேட்கலாம் அல்லது உன் பாடப்புத்தகத்தை 📷 கேமராவில் போட்டோ எடுத்து அதன் விளக்கம் மற்றும் சந்தேகங்களை உடனடியாகக் கேட்டுத் தெரிந்துகொள்ளலாம்!",
-                    tanglishText = "ஹலோ சுபிக்சா (சுபி)! ஐ அம் யுவர் தனம் டீச்சர் பவர்ட் பை ஜெமினி 3.8 ஃபிளாஷ்! டேக் எ போட்டோ ஆஃப் யுவர் டெக்ஸ்ட்புக் டு கிளியர் யுவர் டவுட்ஸ்!",
-                    coachingTip = "📷 புத்தகப் பக்கத்தை போட்டோ எடுக்க கீழே உள்ள கேமரா பட்டனை அழுத்தவும்!"
+                    englishText = "Hello Subiksha (Subi)! ⚡ Gemini 3.8 Flash is now active in your Voice Bot! Ask me ANY question in Tamil or English (Science, Maths, GK, Grammar, Stories, Translations, or Textbook Photos 📷) and I will answer immediately!",
+                    tamilText = "வணக்கம் சுபிக்சா (சுபி)! ⚡ உன் Voice Bot-இல் இப்போது Gemini 3.8 Flash சேர்க்கப்பட்டுள்ளது! நீ எதை கேட்டாலும் (அறிவியல், கணக்கு, பொது அறிவு, ஆங்கில இலக்கணம், கதைகள், மொழிபெயர்ப்பு அல்லது 📷 பாடப்புத்தக போட்டோ சந்தேகம்) உடனடியாகத் தமிழிலும் ஆங்கிலத்திலும் பதிலளிப்பேன்!",
+                    tanglishText = "ஹலோ சுபிக்சா (சுபி)! ஜெமினி 3.8 ஃபிளாஷ் இஸ் நவ் ஆக்டிவ்! ஆஸ்க் மீ எனி கொஸ்டின் இன் தமிழ் ஆர் இங்கிலீஷ் அண்ட் ஐ வில் ஆன்சர் இம்மீடியட்லி!",
+                    coachingTip = "⚡ Gemini 3.8 Flash Active: மைக் பட்டனை அழுத்தி அல்லது டைப் செய்து எதை வேண்டுமானாலும் கேளுங்கள்!"
                 )
                 repository.addChatMessage(greeting)
             }

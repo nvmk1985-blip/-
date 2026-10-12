@@ -174,27 +174,34 @@ Return strictly valid JSON with keys: "english", "tamil", "tanglish", "tip".
         val apiKey = try { BuildConfig.GEMINI_API_KEY } catch (_: Exception) { "" }
         if (apiKey.isNotBlank() && apiKey != "MY_GEMINI_API_KEY") {
             try {
-                val recentTurns = conversationHistory.takeLast(6).map { msg ->
-                    if (msg.sender == "user") {
-                        ContentPayload(
-                            role = "user",
-                            parts = listOf(PartPayload(text = msg.englishText))
-                        )
-                    } else {
-                        ContentPayload(
-                            role = "model",
-                            parts = listOf(
-                                PartPayload(
-                                    text = JSONObject().apply {
-                                        put("english", msg.englishText)
-                                        put("tamil", msg.tamilText)
-                                        put("tanglish", msg.tanglishText)
-                                        put("tip", msg.coachingTip)
-                                    }.toString()
-                                )
+                // Build strictly alternating user -> model turns starting with a 'user' message
+                val alternatingTurns = mutableListOf<ContentPayload>()
+                var expectedRole = "user"
+                for (msg in conversationHistory.takeLast(8)) {
+                    val role = if (msg.sender == "user") "user" else "model"
+                    if (role == expectedRole) {
+                        val payloadText = if (role == "user") {
+                            msg.englishText
+                        } else {
+                            JSONObject().apply {
+                                put("english", msg.englishText)
+                                put("tamil", msg.tamilText)
+                                put("tanglish", msg.tanglishText)
+                                put("tip", msg.coachingTip)
+                            }.toString()
+                        }
+                        alternatingTurns.add(
+                            ContentPayload(
+                                role = role,
+                                parts = listOf(PartPayload(text = payloadText))
                             )
                         )
+                        expectedRole = if (expectedRole == "user") "model" else "user"
                     }
+                }
+                // Ensure the history ends with a 'model' turn before appending the new 'user' turn
+                if (alternatingTurns.isNotEmpty() && alternatingTurns.last().role == "user") {
+                    alternatingTurns.removeAt(alternatingTurns.lastIndex)
                 }
 
                 val currentPromptText = if (contextScenario != null) {
@@ -203,7 +210,7 @@ Return strictly valid JSON with keys: "english", "tamil", "tanglish", "tip".
                     "User question / message: $userMessage\n(Answer this question or request directly, accurately, and completely in both English and Tamil JSON format.)"
                 }
 
-                val allContents = recentTurns + ContentPayload(
+                val allContents = alternatingTurns + ContentPayload(
                     role = "user",
                     parts = listOf(PartPayload(text = currentPromptText))
                 )
@@ -230,12 +237,36 @@ Return strictly valid JSON with keys: "english", "tamil", "tanglish", "tip".
                     val parsed = parseJsonOrPlainResponse(rawText, preferredModel.displayName)
                     if (parsed != null) return@withContext parsed
                 }
+
+                // Single-turn fallback without systemInstruction/responseMimeType if multi-turn failed
+                val singleTurnRequest = GeminiRequest(
+                    contents = listOf(
+                        ContentPayload(
+                            role = "user",
+                            parts = listOf(PartPayload(text = "$SYSTEM_PROMPT\n\n$currentPromptText"))
+                        )
+                    ),
+                    generationConfig = GenerationConfigPayload(
+                        temperature = 0.65f,
+                        maxOutputTokens = 4096
+                    )
+                )
+                val fallbackResp = GeminiApiClient.generateWithFallback(
+                    apiKey = apiKey,
+                    request = singleTurnRequest,
+                    preferredModel = preferredModel.id
+                )
+                val fallbackText = fallbackResp?.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                if (!fallbackText.isNullOrBlank()) {
+                    val parsed = parseJsonOrPlainResponse(fallbackText, preferredModel.displayName)
+                    if (parsed != null) return@withContext parsed
+                }
             } catch (_: Exception) {
-                // Fall through to universal local engine if network/key error occurs
+                // Fall through to live web & universal local engine if network/key error occurs
             }
         }
 
-        // Universal Knowledge + Grammar + Math + Translation + Conversation Engine
+        // Universal Knowledge + Live Web Encyclopedia/Translation + Grammar + Math Engine
         return@withContext getLocalTutorReply(userMessage, contextScenario, preferredModel.displayName)
     }
 
@@ -287,14 +318,98 @@ Return strictly valid JSON with keys: "english", "tamil", "tanglish", "tip".
     private fun getLocalTutorReply(input: String, scenario: String?, modelDisplayName: String): TutorResponse {
         val cleanedInput = input.trim()
         val lower = cleanedInput.lowercase()
+        val wordCount = cleanedInput.split(Regex("\\s+")).size
 
-        // First: Check UniversalKnowledgeEngine (Math, Date/Time, Science, GK, Leaders, Grammar, Dictionary, Stories, Riddles)
+        // 1. Check UniversalKnowledgeEngine first (Math, Multiplication Tables, Date/Time, Science, Space, GK, Leaders, Grammar, Stories, Riddles)
         val universalAnswer = UniversalKnowledgeEngine.answerAnyQuestion(cleanedInput, scenario)
         if (universalAnswer != null) {
             return universalAnswer.copy(modelUsed = modelDisplayName)
         }
 
-        // Second: Check "How to say X in English" / "எப்படி சொல்வது" / "meaning" queries
+        // 2. Only treat as a simple greeting/identity if it is a short greeting phrase (not a general question containing 'hi' like 'history'/'Gandhi'/'which')
+        val isShortMessage = wordCount <= 5 && !cleanedInput.contains("?")
+        if (isShortMessage && (lower == "my name" || lower == "who am i" || cleanedInput.contains("என் பெயர் என்ன"))) {
+            return TutorResponse(
+                englishText = "You are Subiksha, my smart 9-year-old student! Everyone lovingly calls you Subi. You can say: 'My name is Subiksha, and I am 9 years old!'",
+                tamilText = "நீ என் சுட்டி மாணவி சுபிக்சா (சுபி), உனக்கு 9 வயது! ஆங்கிலத்தில் உன்னை அறிமுகப்படுத்த: 'My name is Subiksha, and I am 9 years old!' என்று சொல்லிப் பார் சுபி!",
+                tanglishText = "யூ ஆர் சுபிக்சா, மை ஸ்மார்ட் நைன் இயர் ஓல்ட் ஸ்டூடண்ட்! மை நேம் இஸ் சுபிக்சா, அண்ட் ஐ அம் நைன் இயர்ஸ் ஓல்ட்!",
+                coachingTip = "சுபி, உன்னை அறிமுகப்படுத்தும்போது 'I am Subiksha (Subi). I am a 9-year-old girl.' என்று புன்னகையுடன் சொல்லு!",
+                modelUsed = modelDisplayName
+            )
+        }
+
+        if (isShortMessage && (lower.contains("good morning") || cleanedInput.contains("காலை வணக்கம்"))) {
+            return TutorResponse(
+                englishText = "Good morning, Subi! I am Dhanam Teacher powered by Gemini 3.8 Flash. Ask me any question about English, Science, Math, GK, or Stories!",
+                tamilText = "காலை வணக்கம் சுபிக்சா (சுபி)! நான் Gemini 3.8 Flash உடன் இயங்கும் உன் தனம் டீச்சர். ஆங்கிலம், அறிவியல், கணிதம், பொது அறிவு, கதைகள் என எதை வேண்டுமானாலும் என்னிடம் கேள்!",
+                tanglishText = "குட் மார்னிங், சுபி! ஐ அம் தனம் டீச்சர் பவர்ட் பை ஜெமினி 3.8 ஃபிளாஷ். ஆஸ்க் மீ எனி கொஸ்டின்!",
+                coachingTip = "சுபி, காலையில் டீச்சரைப் பார்க்கும்போது 'Good morning, Dhanam Teacher!' என்று உற்சாகமாகச் சொல்லலாம்.",
+                modelUsed = modelDisplayName
+            )
+        }
+
+        if (isShortMessage && (lower.contains("good evening") || lower.contains("good afternoon") || cleanedInput.contains("மாலை வணக்கம்") || cleanedInput.contains("மதிய வணக்கம்"))) {
+            return TutorResponse(
+                englishText = "Good evening, Subi! How was your day today? You can ask me any question or practice speaking English with me!",
+                tamilText = "மாலை வணக்கம் சுபி! இன்று உன் நாள் எப்படி இருந்தது? நீ என்னிடம் எந்தக் கேள்வியும் கேட்கலாம் அல்லது ஆங்கிலம் பேசிப் பழகலாம்!",
+                tanglishText = "குட் ஈவ்னிங், சுபி! ஹவ் வாஸ் யுவர் டே டுடே? யூ கேன் ஆஸ்க் மீ எனி கொஸ்டின்!",
+                coachingTip = "சுபி, இன்று நடந்ததைக் கூற Past Tense (உ.ம்: 'I played with my friends', 'I read a story') பயன்படுத்தவும்.",
+                modelUsed = modelDisplayName
+            )
+        }
+
+        if (wordCount <= 6 && (lower.contains("how are you") || lower.contains("epdi irukinga") || cleanedInput.contains("எப்படி இருக்க") || cleanedInput.contains("நலமா"))) {
+            return TutorResponse(
+                englishText = "I am doing wonderfully well, thank you for asking, Subi! How are you feeling today? Ask me anything you want to learn!",
+                tamilText = "நான் மிக நலமாக இருக்கிறேன் சுபி, கேட்டதற்கு நன்றி! இன்று நீ எப்படி இருக்கிறாய்? நீ எதைப் பற்றித் தெரிந்துகொள்ள விரும்பினாலும் என்னிடம் கேள்!",
+                tanglishText = "ஐ அம் டூயிங் வொண்டர்ஃபுல்லி வெல், தேங்க் யூ ஃபார் ஆஸ்கிங், சுபி! ஹவ் ஆர் யூ ஃபீலிங் டுடே?",
+                coachingTip = "சுபி, யாராவது 'How are you?' எனக் கேட்டால், 'I am doing great, thank you!' என அழகாகப் பதில் சொல்லிப் பழகு.",
+                modelUsed = modelDisplayName
+            )
+        }
+
+        val isExactGreeting = isShortMessage && (
+            Regex("^\\b(hello|hi|hey|vanakkam)\\b(\\s+dhanam)?(\\s+teacher)?[!.]?$").matches(lower) ||
+                cleanedInput == "வணக்கம்" || cleanedInput == "வணக்கம் டீச்சர்" || cleanedInput == "ஹலோ"
+            )
+        if (isExactGreeting) {
+            return TutorResponse(
+                englishText = "Hello Subiksha (Subi)! I am Dhanam Teacher with Gemini 3.8 Flash. You can ask me any question in Tamil or English — Science, Math, GK, Grammar, Stories, or Translations!",
+                tamilText = "வணக்கம் சுபிக்சா (சுபி)! நான் Gemini 3.8 Flash சக்தியுடன் இயங்கும் உன் தனம் டீச்சர். அறிவியல், கணிதம், பொது அறிவு, இலக்கணம், கதைகள், மொழிபெயர்ப்பு என எதை வேண்டுமானாலும் தமிழில் அல்லது ஆங்கிலத்தில் கேள்!",
+                tanglishText = "ஹலோ சுபிக்சா (சுபி)! ஐ அம் தனம் டீச்சர் வித் ஜெமினி 3.8 ஃபிளாஷ். யூ கேன் ஆஸ்க் மீ எனி கொஸ்டின் இன் தமிழ் ஆர் இங்கிலீஷ்!",
+                coachingTip = "சுபி, 'Why is the sky blue?', '15 * 12 என்ன?', 'Tell me a story', 'Past tense என்றால் என்ன?' போன்று எதை வேண்டுமானாலும் கேள்!",
+                modelUsed = modelDisplayName
+            )
+        }
+
+        if (wordCount <= 5 && (lower == "who are you" || lower == "what is your name" || cleanedInput == "யார் நீ" || cleanedInput == "உங்கள் பெயர் என்ன")) {
+            return TutorResponse(
+                englishText = "I am Dhanam Teacher, your AI Spoken English & General Knowledge Tutor powered by Gemini 3.8 Flash! I can answer any question you ask in English and Tamil.",
+                tamilText = "நான் தனம் டீச்சர் (Gemini 3.8 Flash AI ஆசிரியை)! நீ கேட்கும் எந்தக் கேள்விக்கும் ஆங்கிலத்திலும் தமிழிலும் உடனடியாகப் பதிலளிப்பேன்.",
+                tanglishText = "ஐ அம் தனம் டீச்சர், யுவர் ஏஐ ஸ்போக்கன் இங்கிலீஷ் அண்ட் ஜெனரல் நாலெட்ஜ் ட்யூட்டர் பவர்ட் பை ஜெமினி 3.8 ஃபிளாஷ்!",
+                coachingTip = "உன்னை அறிமுகப்படுத்த 'My name is Subiksha, you can call me Subi. I am 9 years old.' எனத் தெளிவாகச் சொல்லலாம்!",
+                modelUsed = modelDisplayName
+            )
+        }
+
+        if (isShortMessage && (Regex("\\b(thank you|thanks)\\b").containsMatchIn(lower) || cleanedInput.contains("நன்றி"))) {
+            return TutorResponse(
+                englishText = "You are most welcome, Subi dear! Dhanam Teacher is always happy to answer all your questions.",
+                tamilText = "மிக்க மகிழ்ச்சி சுபி செல்லம்! உன் எல்லாக் கேள்விகளுக்கும் பதிலளிக்க தனம் டீச்சருக்கு எப்போதும் மகிழ்ச்சி.",
+                tanglishText = "யூ ஆர் மோஸ்ட் வெல்கம், சுபி டியர்! தனம் டீச்சர் இஸ் ஆல்வேஸ் ஹேப்பி டூ ஆன்சர் ஆல் யுவர் கொஸ்டின்ஸ்.",
+                coachingTip = "சுபி, யாராவது உனக்கு உதவி செய்தால் 'Thank you so much!' என்று சொல்வது நல்ல பழக்கம்.",
+                modelUsed = modelDisplayName
+            )
+        }
+
+        // 3. Query LiveWebKnowledgeEngine (Wikipedia EN + TA, Free Dictionary, & Bilingual GTX Translation)
+        // This guarantees a real, factual answer or accurate translation for ANY topic in the world!
+        val liveAnswer = LiveWebKnowledgeEngine.fetchLiveAnswerForAnyQuestion(cleanedInput, modelDisplayName)
+        if (liveAnswer != null) {
+            return liveAnswer
+        }
+
+        // 4. Offline Fallback if device has no internet connection
         if (lower.contains("எப்படி சொல்வது") || lower.contains("எப்படி சொல்லணும்") ||
             lower.contains("how to say") || lower.contains("in english") ||
             lower.contains("ஆங்கிலத்தில்") || lower.contains("translate") ||
@@ -318,103 +433,19 @@ Return strictly valid JSON with keys: "english", "tamil", "tanglish", "tip".
             )
         }
 
-        // Third: Student & Teacher identity / greetings / everyday topics
-        if (lower.contains("my name") || lower.contains("who am i") || lower.contains("என் பெயர்") || lower.contains("வயது")) {
-            return TutorResponse(
-                englishText = "You are Subiksha, my smart 9-year-old student! Everyone lovingly calls you Subi. You can say: 'My name is Subiksha, and I am 9 years old!'",
-                tamilText = "நீ என் சுட்டி மாணவி சுபிக்சா (சுபி), உனக்கு 9 வயது! ஆங்கிலத்தில் உன்னை அறிமுகப்படுத்த: 'My name is Subiksha, and I am 9 years old!' என்று சொல்லிப் பார் சுபி!",
-                tanglishText = "யூ ஆர் சுபிக்சா, மை ஸ்மார்ட் நைன் இயர் ஓல்ட் ஸ்டூடண்ட்! மை நேம் இஸ் சுபிக்சா, அண்ட் ஐ அம் நைன் இயர்ஸ் ஓல்ட்!",
-                coachingTip = "சுபி, உன்னை அறிமுகப்படுத்தும்போது 'I am Subiksha (Subi). I am a 9-year-old girl.' என்று புன்னகையுடன் சொல்லு!",
-                modelUsed = modelDisplayName
-            )
-        }
-
-        if (lower.contains("story") || lower.contains("கதை") || lower.contains("goose") || lower.contains("வாத்து") || lower.contains("avvaiyar") || lower.contains("ஔவையார்")) {
-            return TutorResponse(
-                englishText = "Subi dear, in Adi's Book, Story 1 is 'The Goose and the Golden Eggs'. A farmer had a goose that laid one golden egg daily. Out of greed, he cut it open and lost everything! Moral: Greed brings great loss.",
-                tamilText = "சுபி செல்லம், ஆதி புத்தகத்தின் முதல் கதை 'வாத்தும் பொன் முட்டையும்': ஒரு குடியானவனிடம் தினமும் ஒரு பொன் முட்டை இடும் வாத்து இருந்தது. பேராசையால் வயிற்றைக் கிழித்துப் பார்த்து வாத்தையும் இழந்தான்! நீதி: பேராசை பெரு நஷ்டம் தரும்.",
-                tanglishText = "சுபி டியர், இன் ஆதிஸ் புக், ஸ்டோரி ஒன் இஸ் 'தி கூஸ் அண்ட் தி கோல்டன் எக்ஸ்'. மாரல்: கிரீட் பிரிங்ஸ் கிரேட் லாஸ்.",
-                coachingTip = "சுபி, மேலும் கதைகளைக் கேட்க 'Tell me the Lion and Mouse story' அல்லது 'Thirsty Crow story' என்று கேள்!",
-                modelUsed = modelDisplayName
-            )
-        }
-
-        if (lower.contains("good morning") || lower.contains("காலை வணக்கம்")) {
-            return TutorResponse(
-                englishText = "Good morning, Subi! I am Dhanam Teacher powered by Gemini 3.8 Flash. Ask me any question about English, Science, Math, GK, or Stories!",
-                tamilText = "காலை வணக்கம் சுபிக்சா (சுபி)! நான் Gemini 3.8 Flash உடன் இயங்கும் உன் தனம் டீச்சர். ஆங்கிலம், அறிவியல், கணிதம், பொது அறிவு, கதைகள் என எதை வேண்டுமானாலும் என்னிடம் கேள்!",
-                tanglishText = "குட் மார்னிங், சுபி! ஐ அம் தனம் டீச்சர் பவர்ட் பை ஜெமினி 3.8 ஃபிளாஷ். ஆஸ்க் மீ எனி கொஸ்டின்!",
-                coachingTip = "சுபி, காலையில் டீச்சரைப் பார்க்கும்போது 'Good morning, Dhanam Teacher!' என்று உற்சாகமாகச் சொல்லலாம்.",
-                modelUsed = modelDisplayName
-            )
-        }
-
-        if (lower.contains("good evening") || lower.contains("good afternoon") || lower.contains("மாலை வணக்கம்") || lower.contains("மதிய வணக்கம்")) {
-            return TutorResponse(
-                englishText = "Good evening, Subi! How was your day today? You can ask me any question or practice speaking English with me!",
-                tamilText = "மாலை வணக்கம் சுபி! இன்று உன் நாள் எப்படி இருந்தது? நீ என்னிடம் எந்தக் கேள்வியும் கேட்கலாம் அல்லது ஆங்கிலம் பேசிப் பழகலாம்!",
-                tanglishText = "குட் ஈவ்னிங், சுபி! ஹவ் வாஸ் யுவர் டே டுடே? யூ கேன் ஆஸ்க் மீ எனி கொஸ்டின்!",
-                coachingTip = "சுபி, இன்று நடந்ததைக் கூற Past Tense (உ.ம்: 'I played with my friends', 'I read a story') பயன்படுத்தவும்.",
-                modelUsed = modelDisplayName
-            )
-        }
-
-        if (lower.contains("how are you") || lower.contains("how is your day") || lower.contains("epdi irukinga") || lower.contains("எப்படி இருக்க") || lower.contains("நலமா")) {
-            return TutorResponse(
-                englishText = "I am doing wonderfully well, thank you for asking, Subi! How are you feeling today? Ask me anything you want to learn!",
-                tamilText = "நான் மிக நலமாக இருக்கிறேன் சுபி, கேட்டதற்கு நன்றி! இன்று நீ எப்படி இருக்கிறாய்? நீ எதைப் பற்றித் தெரிந்துகொள்ள விரும்பினாலும் என்னிடம் கேள்!",
-                tanglishText = "ஐ அம் டூயிங் வொண்டர்ஃபுல்லி வெல், தேங்க் யூ ஃபார் ஆஸ்கிங், சுபி! ஹவ் ஆர் யூ ஃபீலிங் டுடே?",
-                coachingTip = "சுபி, யாராவது 'How are you?' எனக் கேட்டால், 'I am doing great, thank you!' என அழகாகப் பதில் சொல்லிப் பழகு.",
-                modelUsed = modelDisplayName
-            )
-        }
-
-        if (lower.contains("hello") || lower.contains("hi") || lower.contains("hey") || lower.contains("vanakkam") || lower.contains("வணக்கம்")) {
-            return TutorResponse(
-                englishText = "Hello Subiksha (Subi)! I am Dhanam Teacher with Gemini 3.8 Flash. You can ask me any question in Tamil or English — Science, Math, GK, Grammar, Stories, or Translations!",
-                tamilText = "வணக்கம் சுபிக்சா (சுபி)! நான் Gemini 3.8 Flash சக்தியுடன் இயங்கும் உன் தனம் டீச்சர். அறிவியல், கணிதம், பொது அறிவு, இலக்கணம், கதைகள், மொழிபெயர்ப்பு என எதை வேண்டுமானாலும் தமிழில் அல்லது ஆங்கிலத்தில் கேள்!",
-                tanglishText = "ஹலோ சுபிக்சா (சுபி)! ஐ அம் தனம் டீச்சர் வித் ஜெமினி 3.8 ஃபிளாஷ். யூ கேன் ஆஸ்க் மீ எனி கொஸ்டின் இன் தமிழ் ஆர் இங்கிலீஷ்!",
-                coachingTip = "சுபி, 'Why is the sky blue?', '15 * 12 என்ன?', 'Tell me a story', 'Past tense என்றால் என்ன?' போன்று எதை வேண்டுமானாலும் கேள்!",
-                modelUsed = modelDisplayName
-            )
-        }
-
-        if (lower.contains("who are you") || lower.contains("your name") || lower.contains("dhanam") || lower.contains("தனம்") || lower.contains("யார் நீ")) {
-            return TutorResponse(
-                englishText = "I am Dhanam Teacher, your AI Spoken English & General Knowledge Tutor powered by Gemini 3.8 Flash! I can answer any question you ask in English and Tamil.",
-                tamilText = "நான் தனம் டீச்சர் (Gemini 3.8 Flash AI ஆசிரியை)! நீ கேட்கும் எந்தக் கேள்விக்கும் ஆங்கிலத்திலும் தமிழிலும் உடனடியாகப் பதிலளிப்பேன்.",
-                tanglishText = "ஐ அம் தனம் டீச்சர், யுவர் ஏஐ ஸ்போக்கன் இங்கிலீஷ் அண்ட் ஜெனரல் நாலெட்ஜ் ட்யூட்டர் பவர்ட் பை ஜெமினி 3.8 ஃபிளாஷ்!",
-                coachingTip = "உன்னை அறிமுகப்படுத்த 'My name is Subiksha, you can call me Subi. I am 9 years old.' எனத் தெளிவாகச் சொல்லலாம்!",
-                modelUsed = modelDisplayName
-            )
-        }
-
-        if (lower.contains("thank") || lower.contains("நன்றி") || lower.contains("romba nandri")) {
-            return TutorResponse(
-                englishText = "You are most welcome, Subi dear! Dhanam Teacher is always happy to answer all your questions.",
-                tamilText = "மிக்க மகிழ்ச்சி சுபி செல்லம்! உன் எல்லாக் கேள்விகளுக்கும் பதிலளிக்க தனம் டீச்சருக்கு எப்போதும் மகிழ்ச்சி.",
-                tanglishText = "யூ ஆர் மோஸ்ட் வெல்கம், சுபி டியர்! தனம் டீச்சர் இஸ் ஆல்வேஸ் ஹேப்பி டூ ஆன்சர் ஆல் யுவர் கொஸ்டின்ஸ்.",
-                coachingTip = "சுபி, யாராவது உனக்கு உதவி செய்தால் 'Thank you so much!' என்று சொல்வது நல்ல பழக்கம்.",
-                modelUsed = modelDisplayName
-            )
-        }
-
-        if (lower.contains("eat") || lower.contains("food") || lower.contains("சாப்பாடு") || lower.contains("சாப்பிட்டீங்களா") || lower.contains("saptingala") || lower.contains("breakfast") || lower.contains("lunch") || lower.contains("dinner")) {
-            return TutorResponse(
-                englishText = "Yes Subi, Dhanam Teacher had her meal! Did you finish your food, Subi? Eating healthy food gives you energy to study and play!",
-                tamilText = "ஆமாம் சுபி, தனம் டீச்சர் சாப்பிட்டுவிட்டேன்! சுபி நீ சாப்பிட்டாயா? சத்தான உணவு சாப்பிடுவது படிப்பதற்கும் விளையாடுவதற்கும் நல்ல ஆற்றலைத் தரும்!",
-                tanglishText = "எஸ் சுபி, தனம் டீச்சர் ஹேட் ஹெர் மீல்! டிட் யூ ஃபினிஷ் யுவர் ஃபுட், சுபி?",
-                coachingTip = "சுபி, நீ என்ன சாப்பிட்டாய் என்று சொல்ல 'I had idli and sambar for breakfast' போன்று சொல்லிப் பழகு!",
-                modelUsed = modelDisplayName
-            )
-        }
-
-        // Fourth: Intelligent Question & Sentence Analyzer so ANY arbitrary Tamil or English input gets a real educational & translated response
         val smartReply = buildIntelligentUniversalResponse(cleanedInput)
         return smartReply.copy(modelUsed = modelDisplayName)
     }
 
     private fun smartTranslateSentence(input: String): Triple<String, String, String> {
+        val liveEn = LiveWebKnowledgeEngine.translateText(input, sourceLang = "auto", targetLang = "en")
+        if (!liveEn.isNullOrBlank()) {
+            return Triple(
+                liveEn,
+                "\"$input\" என்பதை ஆங்கிலத்தில்:\n\"$liveEn\"\nஎன்று தெளிவாகச் சொல்லலாம்!",
+                "⚡ இந்த ஆங்கில வாக்கியத்தை சத்தமாக வாசித்து உச்சரிப்பைப் பயிற்சி செய்யுங்கள்!"
+            )
+        }
         val lower = input.lowercase()
         return when {
             lower.contains("மழை") -> Triple(
@@ -439,7 +470,7 @@ Return strictly valid JSON with keys: "english", "tamil", "tanglish", "tip".
             )
             else -> Triple(
                 "Here is how to express \"$input\" clearly in English: \"Could you please tell me more about $input?\"",
-                "\"$input\" என்ற கருத்தை ஆங்கிலத்தில் தெளிவாக வெளிப்படுத்த: Subject + Verb + Object வரிசையில் அமைத்துப் பேசலாம். முழு AI மொழிபெயர்ப்புக்கு AI Studio Secrets-ல் GEMINI_API_KEY இணைக்கப்பட்டுள்ளதை உறுதி செய்யவும்.",
+                "\"$input\" என்ற கருத்தை ஆங்கிலத்தில் தெளிவாக வெளிப்படுத்த: Subject + Verb + Object வரிசையில் அமைத்துப் பேசலாம்.",
                 "தமிழில் உள்ள வாக்கியத்தை ஆங்கிலத்தில் மாற்றும்போது முதலில் 'யார் செய்கிறார்' (Subject), அடுத்து 'என்ன செயல்' (Verb) என்பதைக் கண்டறியுங்கள்!"
             )
         }
