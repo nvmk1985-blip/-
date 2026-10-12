@@ -1,8 +1,122 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="66dp"
-        android:height="66dp"
-        android:drawable="@drawable/ic_app_foreground_1790321107787"
-        android:gravity="center" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:translateX="15"
+        android:translateY="15"
+        android:scaleX="0.65"
+        android:scaleY="0.65">
+
+        <!-- Background circular gradient-style layers -->
+        <path
+            android:fillColor="#1E1B4B"
+            android:pathData="M60,60m-60,0a60,60 0,1 1,120 0a60,60 0,1 1,-60,0" />
+        <path
+            android:fillColor="#312E81"
+            android:pathData="M60,60m-52,0a52,52 0,1 1,104 0a52,52 0,1 1,-104,0" />
+        <path
+            android:fillColor="#4338CA"
+            android:pathData="M60,60m-44,0a44,44 0,1 1,88 0a44,44 0,1 1,-88,0" />
+
+        <!-- Subtle glowing AI aura behind tutor -->
+        <path
+            android:fillColor="#4F46E5"
+            android:pathData="M60,52m-32,0a32,32 0,1 1,64 0a32,32 0,1 1,-64,0" />
+
+        <!-- Shoulders / Traditional saree & blazer silhouette -->
+        <path
+            android:fillColor="#0D9488"
+            android:pathData="M24,104 C28,84 42,76 60,76 C78,76 92,84 96,104 Z" />
+
+        <!-- Gold saree border / drape accent -->
+        <path
+            android:fillColor="#F59E0B"
+            android:pathData="M38,104 L54,77 L64,77 L48,104 Z" />
+
+        <!-- Neck -->
+        <path
+            android:fillColor="#FDBA74"
+            android:pathData="M54,66 L66,66 L66,79 L54,79 Z" />
+
+        <!-- Hair back bun & waves -->
+        <path
+            android:fillColor="#1E293B"
+            android:pathData="M37,48 C37,31 47,22 60,22 C73,22 83,31 83,48 C83,59 78,66 72,68 L48,68 C42,66 37,59 37,48 Z" />
+
+        <!-- Face -->
+        <path
+            android:fillColor="#FED7AA"
+            android:pathData="M43,49 C43,37 50,30 60,30 C70,30 77,37 77,49 C77,61 70,70 60,70 C50,70 43,61 43,49 Z" />
+
+        <!-- Hair front parted sweep -->
+        <path
+            android:fillColor="#0F172A"
+            android:pathData="M42,46 C43,34 51,28 60,28 C69,28 77,34 78,46 C73,39 66,36 60,36 C53,36 47,39 42,46 Z" />
+
+        <!-- Traditional Bindi (Pottu) -->
+        <path
+            android:fillColor="#EF4444"
+            android:pathData="M60,42m-2.2,0a2.2,2.2 0,1 1,4.4 0a2.2,2.2 0,1 1,-4.4,0" />
+
+        <!-- Friendly eyes -->
+        <path
+            android:fillColor="#1E293B"
+            android:pathData="M52,48m-2.3,0a2.3,2.3 0,1 1,4.6 0a2.3,2.3 0,1 1,-4.6,0" />
+        <path
+            android:fillColor="#1E293B"
+            android:pathData="M68,48m-2.3,0a2.3,2.3 0,1 1,4.6 0a2.3,2.3 0,1 1,-4.6,0" />
+
+        <!-- Eyebrows -->
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M48,43 Q52,40 56,43"
+            android:strokeWidth="1.8"
+            android:strokeColor="#1E293B"
+            android:strokeLineCap="round" />
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M64,43 Q68,40 72,43"
+            android:strokeWidth="1.8"
+            android:strokeColor="#1E293B"
+            android:strokeLineCap="round" />
+
+        <!-- Warm encouraging smile -->
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M53,57 Q60,63 67,57"
+            android:strokeWidth="2.4"
+            android:strokeColor="#C2410C"
+            android:strokeLineCap="round" />
+
+        <!-- Gold Earrings (Jhumkas) -->
+        <path
+            android:fillColor="#FBBF24"
+            android:pathData="M41,54m-2.8,0a2.8,2.8 0,1 1,5.6 0a2.8,2.8 0,1 1,-5.6,0" />
+        <path
+            android:fillColor="#FBBF24"
+            android:pathData="M79,54m-2.8,0a2.8,2.8 0,1 1,5.6 0a2.8,2.8 0,1 1,-5.6,0" />
+
+        <!-- AI Voice Headset Mic -->
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M78,52 C82,58 75,65 65,64"
+            android:strokeWidth="2.2"
+            android:strokeColor="#38BDF8"
+            android:strokeLineCap="round" />
+        <path
+            android:fillColor="#38BDF8"
+            android:pathData="M64,64m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5,0" />
+
+        <!-- AI Sparkles -->
+        <path
+            android:fillColor="#34D399"
+            android:pathData="M90,28 L92,33 L97,35 L92,37 L90,42 L88,37 L83,35 L88,33 Z" />
+        <path
+            android:fillColor="#38BDF8"
+            android:pathData="M28,32 L29.5,35.5 L33,37 L29.5,38.5 L28,42 L26.5,38.5 L23,37 L26.5,35.5 Z" />
+    </group>
+</vector>
