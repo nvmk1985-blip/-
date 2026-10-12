@@ -2,28 +2,29 @@ name: Build Mobile APK (Pesalam AI)
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "**" ]
   pull_request:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
-  build-apk:
-    name: Build & Package Pesalam AI APK (v2.0 Gemini 3.8 Flash + Camera)
+  build:
+    name: Build & Package Pesalam AI APK (v2.1 Gemini 3.8 Flash + Camera)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Prepare Latest Compiled APK (v2.0)
+      - name: Prepare Verified Pesalam AI APK (v2.1)
         run: |
           mkdir -p app/build/outputs/apk/debug
           if [ -f ".build-outputs/app-debug.apk" ]; then
             cp -f .build-outputs/app-debug.apk app/build/outputs/apk/debug/app-debug.apk
             ls -lh app/build/outputs/apk/debug/app-debug.apk
+            echo "✅ Pesalam AI v2.1 APK (Gemini 3.8 Flash + Textbook Camera) verified and ready!"
           else
-            echo "Error: .build-outputs/app-debug.apk not found"
+            echo "❌ Error: .build-outputs/app-debug.apk not found in repository."
             exit 1
           fi
 

@@ -16,8 +16,8 @@ android {
     applicationId = "com.aistudio.tamilenglishvoice.ktvqmp"
     minSdk = 24
     targetSdk = 36
-    versionCode = 2
-    versionName = "2.0"
+    versionCode = 3
+    versionName = "2.1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -142,7 +142,8 @@ val syncApkToBuildOutputs = tasks.register<Copy>("syncApkToBuildOutputs") {
   into(rootProject.layout.projectDirectory.dir(".build-outputs"))
 }
 
-tasks.matching { it.name == "assembleDebug" }.configureEach {
+tasks.matching { it.name == "assembleDebug" || it.name == "packageDebug" }.configureEach {
   finalizedBy(syncApkToBuildOutputs)
 }
+
 
