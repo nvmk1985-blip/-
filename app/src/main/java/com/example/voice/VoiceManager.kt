@@ -36,68 +36,81 @@ enum class VoiceTone(
     val id: String,
     val titleEn: String,
     val titleTa: String,
+    val dubbingArtistTa: String,
     val emoji: String,
     val pitch: Float,
     val speedRate: Float,
     val descriptionTa: String,
     val sampleTextTa: String,
-    val sampleTextEn: String
+    val sampleTextEn: String,
+    val isFemale: Boolean = true
 ) {
     TEACHER(
         id = "teacher",
         titleEn = "Dhanam Teacher",
-        titleTa = "அன்பான ஆசிரியை",
+        titleTa = "தனம் டீச்சர்",
+        dubbingArtistTa = "கனிவான வழிகாட்டி • Savitha Dubbing Style",
         emoji = "👩‍🏫",
-        pitch = 1.05f,
-        speedRate = 0.90f,
-        descriptionTa = "கனிவான, பொறுமையான பள்ளி ஆசிரியை குரல்",
-        sampleTextTa = "வணக்கம் சுபி! நான் உங்கள் தனம் டீச்சர். ஆங்கிலத்தை பயமின்றி எளிதாகக் கற்போம்!",
-        sampleTextEn = "Hello Subi! I am your Dhanam Teacher. Let us learn English with joy and confidence!"
+        pitch = 1.04f,
+        speedRate = 0.92f,
+        descriptionTa = "கனிவான, பொறுமையான பள்ளி ஆசிரியை — வழிகாட்டும் இயல்பான பேச்சுத் தமிழ்",
+        sampleTextTa = "ஹாய்! நான் உங்க தனம் டீச்சர் பேசுறேன். பயப்படாம இயல்பா பேசுங்க, ஆங்கிலம் ரொம்ப ஈஸிங்க!",
+        sampleTextEn = "Hello Subi! I am your Dhanam Teacher. Speak freely without fear, learning is so easy!"
+    ),
+    HEROINE_NILA(
+        id = "heroine_nila",
+        titleEn = "Heroine Nila",
+        titleTa = "நிலா (கதாநாயகி)",
+        dubbingArtistTa = "சினிமா கதாநாயகி • Deepa Venkat Style",
+        emoji = "✨",
+        pitch = 1.14f,
+        speedRate = 0.88f,
+        descriptionTa = "மென்மையான, உணர்வுபூர்வமான சினிமா கதாநாயகி டப்பிங் — அழகிய பேச்சுத் தமிழ்",
+        sampleTextTa = "வணக்கம்! நான் நிலா... சினிமா கதாநாயகி டப்பிங் வாய்ஸ். உங்க மனசுல என்ன தோணுதோ அத அப்படியே என்கிட்ட சொல்லுங்க!",
+        sampleTextEn = "Hello! I am Nila, your cine heroine dubbing voice. Share whatever is on your mind with me!"
     ),
     SUBI(
         id = "subi",
         titleEn = "Little Subi",
         titleTa = "சுட்டி சுபி",
+        dubbingArtistTa = "கார்ட்டூன் & அனிமேஷன் • Animation Dubbing Style",
         emoji = "👧",
-        pitch = 1.25f,
-        speedRate = 1.02f,
-        descriptionTa = "மகிழ்ச்சியான, உற்சாகமான 9 வயது சிறுமி குரல்",
-        sampleTextTa = "ஹாய்! என் பெயர் சுபி. என்னோடு சேர்ந்து பேசலாம், விளையாடலாம், புதிய விஷயங்கள் கற்கலாம்!",
-        sampleTextEn = "Hi! My name is Subi. Let us talk and learn fun new things together!"
+        pitch = 1.30f,
+        speedRate = 1.04f,
+        descriptionTa = "துள்ளலான, உற்சாகமான அனிமேஷன் டப்பிங் — குறும்புமிக்க பேச்சுத் தமிழ்",
+        sampleTextTa = "ஹேய் ஜாலி! நான் சுட்டி சுபி பேசுறேன்! வாங்க வாங்க, செமையா ஜாலியா பேசிப் பழகலாம்!",
+        sampleTextEn = "Yay! I am Little Subi! Come on, let us talk and have super fun learning together!"
     ),
-    STORYTELLER(
-        id = "storyteller",
-        titleEn = "Calm Storyteller",
-        titleTa = "கதை சொல்லி",
-        emoji = "🧘",
-        pitch = 0.88f,
-        speedRate = 0.82f,
-        descriptionTa = "அமைதியான, இனிமையான கதை வாசிப்பு நடை",
-        sampleTextTa = "ஒரு அழகான ஊரில், மகிழ்ச்சியான குழந்தைகள் சேர்ந்து பல நல்ல கதைகளைக் கேட்டார்கள்.",
-        sampleTextEn = "Once upon a time, in a peaceful village, children gathered to listen to wonderful stories."
-    ),
-    SPEED_COACH(
-        id = "coach",
-        titleEn = "Speed Coach",
-        titleTa = "வேகப் பயிற்சியாளர்",
-        emoji = "⚡",
-        pitch = 1.02f,
-        speedRate = 1.12f,
-        descriptionTa = "சுறுசுறுப்பான, வேகக் கணிதம் மற்றும் வினாடி வினா குரல்",
-        sampleTextTa = "ரெடியா? மிக விரைவாக மனதிலேயே கணக்கிட்டு சரியான விடையைச் சொல்லுங்கள்!",
-        sampleTextEn = "Are you ready? Calculate mentally at lightning speed and give the correct answer!"
-    ),
-    RADIO_PRESENTER(
-        id = "presenter",
-        titleEn = "Radio Presenter",
-        titleTa = "அறிவிப்பாளர்",
+    RJ_ANANYA(
+        id = "rj_ananya",
+        titleEn = "RJ Ananya",
+        titleTa = "ஆர்.ஜே அனன்யா",
+        dubbingArtistTa = "எஃப்.எம் ரேடியோ ஜாக்கி • Trendy FM Voice Style",
         emoji = "🎙️",
-        pitch = 0.96f,
-        speedRate = 0.95f,
-        descriptionTa = "தெளிவான, கம்பீரமான வானொலி தமிழ் உச்சரிப்பு",
-        sampleTextTa = "இது பேசலாம் ஏஐ தமிழ் வழி ஆங்கிலப் பயிற்சி ஒலிபரப்பு. இன்றைய முக்கியப் பாடம் இதோ.",
-        sampleTextEn = "This is Pesalam AI educational broadcast. Welcome to today's interactive session."
-    )
+        pitch = 1.08f,
+        speedRate = 1.10f,
+        descriptionTa = "கலகலப்பான, மாடர்ன் ஆர்.ஜே டப்பிங் — துடிப்பான நவீன பேச்சுத் தமிழ்",
+        sampleTextTa = "ஹே மக்களே! நான் ஆர்.ஜே அனன்யா பேசுறேன்! இன்னைக்கு என்ன ஸ்பெஷல்? செம எனர்ஜியா பேசலாமா!",
+        sampleTextEn = "Hey folks! RJ Ananya here! What is special today? Let us kick off with full positive energy!"
+    ),
+    KAVITHA_AKKA(
+        id = "kavitha_akka",
+        titleEn = "Kavitha Akka",
+        titleTa = "கவிதா அக்கா",
+        dubbingArtistTa = "பாசமான அக்கா • Family Drama Dubbing Style",
+        emoji = "🌸",
+        pitch = 0.98f,
+        speedRate = 0.86f,
+        descriptionTa = "பாசமான, அன்பான அக்கா குரல் — குடும்பத்து இயல்பான பேச்சுத் தமிழ்",
+        sampleTextTa = "ஹலோ பா! நான் உங்க கவிதா அக்கா. எந்த சந்தேகமா இருந்தாலும் தயங்காம கேளுங்க, நான் பொறுமையா சொல்லித் தர்றேன்!",
+        sampleTextEn = "Hello dear! I am your elder sister Kavitha. Ask any doubt without hesitation, I will explain calmly!"
+    );
+
+    companion object {
+        val STORYTELLER get() = HEROINE_NILA
+        val SPEED_COACH get() = RJ_ANANYA
+        val RADIO_PRESENTER get() = KAVITHA_AKKA
+    }
 }
 
 class VoiceManager(private val context: Context) : RecognitionListener, TextToSpeech.OnInitListener {
@@ -371,19 +384,18 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
             val voices = tts.voices ?: return
             val taVoices = voices.filter { it.locale.language == "ta" }
             if (taVoices.isNotEmpty()) {
+                // Filter for female Tamil voices (Google TTS ta-in-x-taf-*, Samsung, or generic)
+                val femaleVoices = taVoices.filter { voice ->
+                    val name = voice.name.lowercase(Locale.ROOT)
+                    name.contains("female") || name.contains("taf") || name.contains("woman") || !name.contains("male")
+                }
+                val pool = if (femaleVoices.isNotEmpty()) femaleVoices else taVoices
                 val chosen = when (tone) {
-                    VoiceTone.TEACHER, VoiceTone.SUBI -> {
-                        taVoices.find { it.name.contains("female", ignoreCase = true) || it.name.contains("taf", ignoreCase = true) }
-                            ?: taVoices.first()
-                    }
-                    VoiceTone.RADIO_PRESENTER, VoiceTone.STORYTELLER -> {
-                        taVoices.find { it.name.contains("male", ignoreCase = true) || it.name.contains("tam", ignoreCase = true) }
-                            ?: taVoices.last()
-                    }
-                    VoiceTone.SPEED_COACH -> {
-                        taVoices.find { !it.isNetworkConnectionRequired }
-                            ?: taVoices.first()
-                    }
+                    VoiceTone.TEACHER -> pool.firstOrNull() ?: taVoices.first()
+                    VoiceTone.HEROINE_NILA -> pool.find { it.isNetworkConnectionRequired } ?: pool.lastOrNull() ?: taVoices.first()
+                    VoiceTone.SUBI -> pool.find { !it.isNetworkConnectionRequired } ?: pool.firstOrNull() ?: taVoices.first()
+                    VoiceTone.RJ_ANANYA -> pool.getOrNull(1) ?: pool.firstOrNull() ?: taVoices.first()
+                    VoiceTone.KAVITHA_AKKA -> pool.getOrNull(2) ?: pool.lastOrNull() ?: taVoices.first()
                 }
                 tts.voice = chosen
             }
