@@ -73,8 +73,18 @@ Respond strictly in valid JSON format:
 
         if (apiKey.isNotBlank() && apiKey != "MY_GEMINI_API_KEY" && !base64Jpeg.isNullOrBlank()) {
             try {
+                val recentContext = conversationHistory.takeLast(4).joinToString("\n") { msg ->
+                    val speaker = if (msg.sender == "user") "Student" else "Teacher"
+                    "$speaker: ${msg.englishText}"
+                }
+                val contextPrefix = if (recentContext.isNotBlank()) {
+                    "Recent conversation context:\n$recentContext\n\n"
+                } else {
+                    ""
+                }
+
                 val promptForImage = """
-The student Subiksha (Subi) has taken a photo of a textbook page and asked:
+${contextPrefix}The student Subiksha (Subi) has attached a photo of a textbook page and asked:
 "$questionText"
 
 Instructions:
@@ -85,18 +95,21 @@ Instructions:
 Return strictly valid JSON with keys: "english", "tamil", "tanglish", "tip".
 """.trimIndent()
 
-                val request = GeminiRequest(
+                val imagePart = PartPayload(
+                    inlineData = InlineDataPayload(
+                        mimeType = "image/jpeg",
+                        data = base64Jpeg
+                    )
+                )
+
+                // Attempt 1: Structured JSON multimodal request with systemInstruction
+                val structuredRequest = GeminiRequest(
                     contents = listOf(
                         ContentPayload(
                             role = "user",
                             parts = listOf(
                                 PartPayload(text = promptForImage),
-                                PartPayload(
-                                    inlineData = InlineDataPayload(
-                                        mimeType = "image/jpeg",
-                                        data = base64Jpeg
-                                    )
-                                )
+                                imagePart
                             )
                         )
                     ),
@@ -105,6 +118,8 @@ Return strictly valid JSON with keys: "english", "tamil", "tanglish", "tip".
                     ),
                     generationConfig = GenerationConfigPayload(
                         temperature = 0.4f,
+                        topP = 0.95f,
+                        topK = 40,
                         maxOutputTokens = 4096,
                         responseMimeType = "application/json"
                     )
@@ -112,12 +127,48 @@ Return strictly valid JSON with keys: "english", "tamil", "tanglish", "tip".
 
                 val response = GeminiApiClient.generateWithFallback(
                     apiKey = apiKey,
-                    request = request,
+                    request = structuredRequest,
                     preferredModel = preferredModel.id
                 )
-                val rawText = response?.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                val rawText = response?.candidates
+                    ?.firstOrNull()
+                    ?.content
+                    ?.parts
+                    ?.firstOrNull { !it.text.isNullOrBlank() }
+                    ?.text
                 if (!rawText.isNullOrBlank()) {
                     val parsed = parseJsonOrPlainResponse(rawText, "${preferredModel.displayName} Vision 📸")
+                    if (parsed != null) return@withContext parsed
+                }
+
+                // Attempt 2: Standard multimodal request without responseMimeType constraint for maximum stability
+                val fallbackMultimodalRequest = GeminiRequest(
+                    contents = listOf(
+                        ContentPayload(
+                            parts = listOf(
+                                PartPayload(text = "$SYSTEM_PROMPT\n\n$promptForImage"),
+                                imagePart
+                            )
+                        )
+                    ),
+                    generationConfig = GenerationConfigPayload(
+                        temperature = 0.4f,
+                        maxOutputTokens = 4096
+                    )
+                )
+                val fallbackResp = GeminiApiClient.generateWithFallback(
+                    apiKey = apiKey,
+                    request = fallbackMultimodalRequest,
+                    preferredModel = preferredModel.id
+                )
+                val fallbackText = fallbackResp?.candidates
+                    ?.firstOrNull()
+                    ?.content
+                    ?.parts
+                    ?.firstOrNull { !it.text.isNullOrBlank() }
+                    ?.text
+                if (!fallbackText.isNullOrBlank()) {
+                    val parsed = parseJsonOrPlainResponse(fallbackText, "${preferredModel.displayName} Vision 📸")
                     if (parsed != null) return@withContext parsed
                 }
             } catch (_: Exception) {

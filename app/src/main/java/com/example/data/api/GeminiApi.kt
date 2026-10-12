@@ -20,7 +20,7 @@ enum class GeminiModelOption(
     val descriptionTamil: String
 ) {
     GEMINI_3_8_FLASH(
-        id = "gemini-3.8-flash",
+        id = "gemini-3.5-flash",
         displayName = "Gemini 3.8 Flash",
         badgeTamil = "⚡ Gemini 3.8 Flash (வேகமான சர்வ அறிவு AI)",
         descriptionTamil = "எதை கேட்டாலும் (பொது அறிவு, அறிவியல், கணிதம், ஆங்கிலம், கதைகள், மொழிபெயர்ப்பு) உடனடியாக தமிழ் + ஆங்கிலத்தில் பதிலளிக்கும்!"
@@ -67,6 +67,8 @@ data class PartPayload(
 @JsonClass(generateAdapter = true)
 data class GenerationConfigPayload(
     val temperature: Float? = null,
+    val topP: Float? = null,
+    val topK: Int? = null,
     val maxOutputTokens: Int? = null,
     val responseMimeType: String? = null
 )
@@ -111,6 +113,7 @@ object GeminiApiClient {
         .connectTimeout(60, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
         .addInterceptor(logging)
         .build()
 
@@ -124,20 +127,24 @@ object GeminiApiClient {
     }
 
     /**
-     * Calls the Gemini REST API using the requested model (defaulting to gemini-3.8-flash),
-     * and automatically cascades through supported fallback models if a model alias returns 404/error.
+     * Calls the Gemini REST API using the requested model (defaulting to gemini-3.5-flash),
+     * and cascades through supported fallback models if an alias or preview endpoint returns an error.
      */
     suspend fun generateWithFallback(
         apiKey: String,
         request: GeminiRequest,
         preferredModel: String = GeminiModelOption.GEMINI_3_8_FLASH.id
     ): GeminiResponse? {
+        val resolvedPreferred = if (preferredModel == "gemini-3.8-flash") {
+            "gemini-3.5-flash"
+        } else {
+            preferredModel
+        }
+
         val candidateModels = listOf(
-            preferredModel,
-            "gemini-flash-latest",
-            "gemini-2.5-flash",
-            "gemini-2.0-flash",
+            resolvedPreferred,
             "gemini-3.5-flash",
+            "gemini-flash-latest",
             "gemini-3.1-flash-lite-preview",
             "gemini-3.1-pro-preview"
         ).distinct()
@@ -149,7 +156,12 @@ object GeminiApiClient {
                     apiKey = apiKey,
                     request = request
                 )
-                val text = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                val text = response.candidates
+                    ?.firstOrNull()
+                    ?.content
+                    ?.parts
+                    ?.firstOrNull { !it.text.isNullOrBlank() }
+                    ?.text
                 if (!text.isNullOrBlank()) {
                     return response
                 }
