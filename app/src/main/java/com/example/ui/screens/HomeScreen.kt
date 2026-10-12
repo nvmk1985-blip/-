@@ -196,6 +196,35 @@ fun HomeScreen(
                                 Text("Ask Anything", fontWeight = FontWeight.Bold)
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Direct Textbook Camera Doubt Solver button inside the Hero Card
+                        Button(
+                            onClick = {
+                                viewModel.requestOpenCameraSheet()
+                                onNavigateToBot()
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiary
+                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("hero_textbook_camera_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = "Textbook Camera",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "📷 பாடப்புத்தக போட்டோ & சந்தேகம் (Textbook Scan)",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
             }
@@ -224,24 +253,25 @@ fun HomeScreen(
                             text = "👧 சுபிக்சா (சுபி, 9 வயது) - சுய அறிமுகம்",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 8.dp)
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.clickable {
-                                    viewModel.voiceManager.speakBilingual(subiIntroEn, subiIntroTa)
-                                }
-                            ) {
-                                Text(
-                                    text = "🔊 கேள் (Listen)",
-                                    color = Color.White,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                                )
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable {
+                                viewModel.voiceManager.speakBilingual(subiIntroEn, subiIntroTa)
                             }
+                        ) {
+                            Text(
+                                text = "🔊 கேள் (Listen)",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
