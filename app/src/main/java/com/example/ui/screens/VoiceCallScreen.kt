@@ -211,7 +211,7 @@ fun VoiceCallScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_app_foreground_1790321107787),
+                        painter = painterResource(id = R.drawable.ic_pesalam_avatar),
                         contentDescription = "Dhanam Teacher AI voice tutor",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()

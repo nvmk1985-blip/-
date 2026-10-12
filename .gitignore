@@ -16,3 +16,6 @@
 local.properties
 .env
 debug.keystore
+app/src/main/res/drawable/*.jpg
+app/src/main/res/drawable/*.png
+app/src/main/res/mipmap-*/*.png

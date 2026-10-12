@@ -146,7 +146,7 @@ fun HomeScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Image(
-                                    painter = painterResource(id = R.drawable.ic_app_foreground_1790321107787),
+                                    painter = painterResource(id = R.drawable.ic_pesalam_avatar),
                                     contentDescription = "Dhanam Teacher AI Companion",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()

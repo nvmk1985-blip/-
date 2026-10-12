@@ -22,10 +22,14 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Accept Android SDK Licenses (Direct Hashes + SDKManager)
+      - name: Accept Android SDK Licenses & Prepare SDK 36.1
         shell: bash
         run: |
           set +o pipefail
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          if [ -x "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+            yes | "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          fi
           for SDK_DIR in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" "/usr/local/lib/android/sdk"; do
             if [ -n "$SDK_DIR" ] && [ -d "$SDK_DIR" ]; then
               mkdir -p "$SDK_DIR/licenses"
@@ -38,12 +42,18 @@ jobs:
               printf "\ne9acab5b5fbb560a72cfaecce8946896ff6aab9d\n" > "$SDK_DIR/licenses/mips-android-sysimage-license"
             fi
           done
-          if [ -x "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" ]; then
-            yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          if [ -x "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+            "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" >/dev/null 2>&1 || true
+            "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36.1" >/dev/null 2>&1 || true
           fi
-          echo "✅ All Android SDK & Preview licenses accepted."
+          if [ ! -d "$SDK_ROOT/platforms/android-36.1" ] && [ -d "$SDK_ROOT/platforms/android-36" ]; then
+            cp -r "$SDK_ROOT/platforms/android-36" "$SDK_ROOT/platforms/android-36.1"
+            sed -i 's/AndroidVersion.ApiLevel=36$/AndroidVersion.ApiLevel=36.1/g' "$SDK_ROOT/platforms/android-36.1/source.properties" || true
+            sed -i 's/platforms;android-36"/platforms;android-36.1"/g' "$SDK_ROOT/platforms/android-36.1/package.xml" || true
+          fi
+          echo "✅ Android SDK & Preview licenses and platform 36.1 ready."
 
-      - name: Restore debug.keystore & .env Configuration
+      - name: Restore Keystore, .env & Sanitize Resource Drawables
         shell: bash
         env:
           SECRET_GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -62,6 +72,14 @@ jobs:
           if [ -n "$SECRET_GEMINI_KEY" ]; then
             echo "GEMINI_API_KEY=$SECRET_GEMINI_KEY" > .env
             echo "✅ Injected GEMINI_API_KEY from GitHub Secrets into .env"
+          fi
+          # Remove any unexported or corrupted binary raster images in drawable/ and legacy mipmap folders
+          rm -f app/src/main/res/drawable/*.jpg app/src/main/res/drawable/*.png
+          rm -rf app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi
+          mkdir -p app/src/main/res/mipmap-anydpi
+          cp -f app/src/main/res/mipmap-anydpi-v26/*.xml app/src/main/res/mipmap-anydpi/ 2>/dev/null || true
+          if [ ! -s "app/src/main/res/drawable/ic_pesalam_avatar.xml" ]; then
+            cp -f app/src/main/res/drawable/ic_launcher_foreground.xml app/src/main/res/drawable/ic_pesalam_avatar.xml
           fi
 
       - name: Setup Gradle 9.3.1
