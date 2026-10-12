@@ -50,6 +50,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,6 +69,8 @@ import com.example.R
 import com.example.data.lessons.LessonDataSource
 import com.example.ui.components.ScoreBadge
 import com.example.ui.components.TtsSpeakerButton
+import com.example.ui.components.VoiceToneChipsRow
+import com.example.ui.components.VoiceToneDialog
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.viewmodel.MainViewModel
 
@@ -82,6 +87,7 @@ fun HomeScreen(
 ) {
     val stats by viewModel.stats.collectAsState()
     val context = LocalContext.current
+    var showVoiceToneDialog by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = modifier
@@ -321,6 +327,66 @@ fun HomeScreen(
                         text = "🇮🇳 $subiIntroTa",
                         fontSize = 12.5.sp,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.9f)
+                    )
+                }
+            }
+        }
+
+        // 5 Voice Tones (Natural Tamil & English Pronunciation)
+        item {
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("home_voice_tones_card")
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = "🎙️", fontSize = 20.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = "5 குரல் தொனிகள் (5 Voice Tones)",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "இயல்பான தமிழ் & ஆங்கில உச்சரிப்பு",
+                                    fontSize = 11.5.sp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { showVoiceToneDialog = true }
+                        ) {
+                            Text(
+                                text = "அனைத்தும் ➡️",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    VoiceToneChipsRow(
+                        voiceManager = viewModel.voiceManager,
+                        onOpenFullSelector = { showVoiceToneDialog = true }
                     )
                 }
             }
@@ -811,6 +877,13 @@ fun HomeScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+
+    if (showVoiceToneDialog) {
+        VoiceToneDialog(
+            voiceManager = viewModel.voiceManager,
+            onDismiss = { showVoiceToneDialog = false }
+        )
     }
 }
 

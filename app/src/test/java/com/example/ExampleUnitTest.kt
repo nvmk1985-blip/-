@@ -70,4 +70,33 @@ class ExampleUnitTest {
     assertTrue(mulQ.options.contains(mulQ.correctAnswer))
     assertTrue(mulQ.stepsEn.isNotEmpty())
   }
+
+  @Test
+  fun testFiveVoiceTones_allDefinedAndDistinct() {
+    val tones = com.example.voice.VoiceTone.entries
+    assertEquals(5, tones.size)
+    assertEquals(
+      listOf("teacher", "subi", "storyteller", "coach", "presenter"),
+      tones.map { it.id }
+    )
+    for (tone in tones) {
+      assertTrue(tone.pitch in 0.8f..1.4f)
+      assertTrue(tone.speedRate in 0.7f..1.3f)
+      assertTrue(tone.titleTa.isNotBlank())
+      assertTrue(tone.sampleTextTa.isNotBlank())
+      assertTrue(tone.sampleTextEn.isNotBlank())
+    }
+  }
+
+  @Test
+  fun testNaturalTamilSpeechOptimizer() {
+    val raw = "15 + 28 = 43. AI App Gemini Flash"
+    val optimized = com.example.voice.NaturalTamilSpeechOptimizer.optimizeForTamilSpeech(raw)
+    assertTrue(optimized.contains("கூட்டல்"))
+    assertTrue(optimized.contains("சமம்"))
+    assertTrue(optimized.contains("ஏஐ"))
+    assertTrue(optimized.contains("ஆப்"))
+    assertTrue(optimized.contains("ஜெமினி"))
+    assertTrue(optimized.contains("ஃபிளாஷ்"))
+  }
 }

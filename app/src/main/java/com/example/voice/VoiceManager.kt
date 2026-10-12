@@ -32,6 +32,74 @@ enum class SttLanguage(val code: String, val label: String, val labelTamil: Stri
     TAMIL("ta-IN", "Tamil (India)", "தமிழ்")
 }
 
+enum class VoiceTone(
+    val id: String,
+    val titleEn: String,
+    val titleTa: String,
+    val emoji: String,
+    val pitch: Float,
+    val speedRate: Float,
+    val descriptionTa: String,
+    val sampleTextTa: String,
+    val sampleTextEn: String
+) {
+    TEACHER(
+        id = "teacher",
+        titleEn = "Dhanam Teacher",
+        titleTa = "அன்பான ஆசிரியை",
+        emoji = "👩‍🏫",
+        pitch = 1.05f,
+        speedRate = 0.90f,
+        descriptionTa = "கனிவான, பொறுமையான பள்ளி ஆசிரியை குரல்",
+        sampleTextTa = "வணக்கம் சுபி! நான் உங்கள் தனம் டீச்சர். ஆங்கிலத்தை பயமின்றி எளிதாகக் கற்போம்!",
+        sampleTextEn = "Hello Subi! I am your Dhanam Teacher. Let us learn English with joy and confidence!"
+    ),
+    SUBI(
+        id = "subi",
+        titleEn = "Little Subi",
+        titleTa = "சுட்டி சுபி",
+        emoji = "👧",
+        pitch = 1.25f,
+        speedRate = 1.02f,
+        descriptionTa = "மகிழ்ச்சியான, உற்சாகமான 9 வயது சிறுமி குரல்",
+        sampleTextTa = "ஹாய்! என் பெயர் சுபி. என்னோடு சேர்ந்து பேசலாம், விளையாடலாம், புதிய விஷயங்கள் கற்கலாம்!",
+        sampleTextEn = "Hi! My name is Subi. Let us talk and learn fun new things together!"
+    ),
+    STORYTELLER(
+        id = "storyteller",
+        titleEn = "Calm Storyteller",
+        titleTa = "கதை சொல்லி",
+        emoji = "🧘",
+        pitch = 0.88f,
+        speedRate = 0.82f,
+        descriptionTa = "அமைதியான, இனிமையான கதை வாசிப்பு நடை",
+        sampleTextTa = "ஒரு அழகான ஊரில், மகிழ்ச்சியான குழந்தைகள் சேர்ந்து பல நல்ல கதைகளைக் கேட்டார்கள்.",
+        sampleTextEn = "Once upon a time, in a peaceful village, children gathered to listen to wonderful stories."
+    ),
+    SPEED_COACH(
+        id = "coach",
+        titleEn = "Speed Coach",
+        titleTa = "வேகப் பயிற்சியாளர்",
+        emoji = "⚡",
+        pitch = 1.02f,
+        speedRate = 1.12f,
+        descriptionTa = "சுறுசுறுப்பான, வேகக் கணிதம் மற்றும் வினாடி வினா குரல்",
+        sampleTextTa = "ரெடியா? மிக விரைவாக மனதிலேயே கணக்கிட்டு சரியான விடையைச் சொல்லுங்கள்!",
+        sampleTextEn = "Are you ready? Calculate mentally at lightning speed and give the correct answer!"
+    ),
+    RADIO_PRESENTER(
+        id = "presenter",
+        titleEn = "Radio Presenter",
+        titleTa = "அறிவிப்பாளர்",
+        emoji = "🎙️",
+        pitch = 0.96f,
+        speedRate = 0.95f,
+        descriptionTa = "தெளிவான, கம்பீரமான வானொலி தமிழ் உச்சரிப்பு",
+        sampleTextTa = "இது பேசலாம் ஏஐ தமிழ் வழி ஆங்கிலப் பயிற்சி ஒலிபரப்பு. இன்றைய முக்கியப் பாடம் இதோ.",
+        sampleTextEn = "This is Pesalam AI educational broadcast. Welcome to today's interactive session."
+    )
+}
+
 class VoiceManager(private val context: Context) : RecognitionListener, TextToSpeech.OnInitListener {
 
     private var speechRecognizer: SpeechRecognizer? = null
@@ -47,6 +115,9 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
 
     private val _selectedSttLanguage = MutableStateFlow(SttLanguage.ENGLISH)
     val selectedSttLanguage: StateFlow<SttLanguage> = _selectedSttLanguage.asStateFlow()
+
+    private val _selectedVoiceTone = MutableStateFlow(VoiceTone.TEACHER)
+    val selectedVoiceTone: StateFlow<VoiceTone> = _selectedVoiceTone.asStateFlow()
 
     private val _speechError = MutableStateFlow<String?>(null)
     val speechError: StateFlow<String?> = _speechError.asStateFlow()
@@ -270,11 +341,53 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
 
     fun setSpeechRate(rate: Float) {
         _speechRate.value = rate
-        textToSpeech?.setSpeechRate(rate)
+        applyToneToTtsEngine(_selectedVoiceTone.value)
     }
 
     fun setTtsMode(mode: TtsMode) {
         _ttsMode.value = mode
+    }
+
+    fun setVoiceTone(tone: VoiceTone) {
+        _selectedVoiceTone.value = tone
+        applyToneToTtsEngine(tone)
+    }
+
+    fun previewVoiceTone(tone: VoiceTone) {
+        setVoiceTone(tone)
+        speakBilingual(tone.sampleTextEn, tone.sampleTextTa)
+    }
+
+    private fun applyToneToTtsEngine(tone: VoiceTone) {
+        val tts = textToSpeech ?: return
+        tts.setPitch(tone.pitch)
+        val effectiveRate = (_speechRate.value * (tone.speedRate / 0.90f)).coerceIn(0.6f, 1.6f)
+        tts.setSpeechRate(effectiveRate)
+        selectBestVoiceForTone(tts, tone)
+    }
+
+    private fun selectBestVoiceForTone(tts: TextToSpeech, tone: VoiceTone) {
+        try {
+            val voices = tts.voices ?: return
+            val taVoices = voices.filter { it.locale.language == "ta" }
+            if (taVoices.isNotEmpty()) {
+                val chosen = when (tone) {
+                    VoiceTone.TEACHER, VoiceTone.SUBI -> {
+                        taVoices.find { it.name.contains("female", ignoreCase = true) || it.name.contains("taf", ignoreCase = true) }
+                            ?: taVoices.first()
+                    }
+                    VoiceTone.RADIO_PRESENTER, VoiceTone.STORYTELLER -> {
+                        taVoices.find { it.name.contains("male", ignoreCase = true) || it.name.contains("tam", ignoreCase = true) }
+                            ?: taVoices.last()
+                    }
+                    VoiceTone.SPEED_COACH -> {
+                        taVoices.find { !it.isNetworkConnectionRequired }
+                            ?: taVoices.first()
+                    }
+                }
+                tts.voice = chosen
+            }
+        } catch (_: Exception) {}
     }
 
     private fun cleanTextForSpeech(text: String): String {
@@ -318,11 +431,14 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
         }
         if (cleanEng.isBlank() && cleanTam.isBlank()) return
 
+        val optEng = NaturalTamilSpeechOptimizer.optimizeForEnglishSpeech(cleanEng)
+        val optTam = NaturalTamilSpeechOptimizer.optimizeForTamilSpeech(cleanTam)
+
         cancelListening()
         stopSpeaking()
 
         _currentPlayingMessageId.value = messageId
-        pendingTamilUtterance = if (_isTamilTtsAvailable.value) cleanTam else null
+        pendingTamilUtterance = if (_isTamilTtsAvailable.value) optTam else null
         pendingMessageId = messageId
 
         val tts = textToSpeech ?: return
@@ -332,16 +448,16 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
         } else {
             tts.language = Locale.US
         }
-        tts.setSpeechRate(_speechRate.value)
+        applyToneToTtsEngine(_selectedVoiceTone.value)
 
         val params = Bundle()
         val utteranceId = "bilingual_en_${System.currentTimeMillis()}"
         params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
         _isSpeaking.value = true
         _currentlySpeakingLang.value = CurrentlySpeakingLanguage.ENGLISH
-        scheduleSpeakingWatchdog(cleanEng.length)
+        scheduleSpeakingWatchdog(optEng.length)
 
-        val result = tts.speak(cleanEng, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+        val result = tts.speak(optEng, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
         if (result == TextToSpeech.ERROR) {
             stopSpeaking()
         }
@@ -350,6 +466,8 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
     fun speakEnglish(text: String, messageId: Long? = null) {
         val clean = cleanTextForSpeech(text)
         if (clean.isBlank()) return
+
+        val optEng = NaturalTamilSpeechOptimizer.optimizeForEnglishSpeech(clean)
 
         cancelListening()
         stopSpeaking()
@@ -362,16 +480,16 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
         } else {
             tts.language = Locale.US
         }
-        tts.setSpeechRate(_speechRate.value)
+        applyToneToTtsEngine(_selectedVoiceTone.value)
 
         val params = Bundle()
         val utteranceId = "single_en_${System.currentTimeMillis()}"
         params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
         _isSpeaking.value = true
         _currentlySpeakingLang.value = CurrentlySpeakingLanguage.ENGLISH
-        scheduleSpeakingWatchdog(clean.length)
+        scheduleSpeakingWatchdog(optEng.length)
 
-        val result = tts.speak(clean, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+        val result = tts.speak(optEng, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
         if (result == TextToSpeech.ERROR) {
             stopSpeaking()
         }
@@ -381,10 +499,12 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
         val clean = cleanTextForSpeech(text)
         if (clean.isBlank()) return
 
+        val optTam = NaturalTamilSpeechOptimizer.optimizeForTamilSpeech(clean)
+
         cancelListening()
         stopSpeaking()
 
-        speakTamilInternal(clean, isChained = false, msgId = messageId)
+        speakTamilInternal(optTam, isChained = false, msgId = messageId)
     }
 
     private fun speakTamilInternal(text: String, isChained: Boolean, msgId: Long?) {
@@ -408,7 +528,6 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
         }
 
         if (status < TextToSpeech.LANG_AVAILABLE) {
-            // Tamil TTS voice pack not installed on device; finish gracefully instead of hanging
             _isSpeaking.value = false
             _currentlySpeakingLang.value = CurrentlySpeakingLanguage.NONE
             _currentPlayingMessageId.value = null
@@ -418,7 +537,7 @@ class VoiceManager(private val context: Context) : RecognitionListener, TextToSp
             return
         }
 
-        tts.setSpeechRate(_speechRate.value)
+        applyToneToTtsEngine(_selectedVoiceTone.value)
 
         val params = Bundle()
         val prefix = if (isChained) "bilingual_ta_" else "single_ta_"

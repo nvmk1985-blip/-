@@ -81,6 +81,8 @@ import com.example.data.math.MathOperation
 import com.example.data.math.MathVocabularyItem
 import com.example.data.math.MentalMathDataSource
 import com.example.data.math.MentalMathQuestion
+import com.example.ui.components.VoiceToneChipsRow
+import com.example.ui.components.VoiceToneDialog
 import com.example.ui.theme.AmberAccent
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.viewmodel.MainViewModel
@@ -101,6 +103,7 @@ fun MentalMathScreen(
     var selectedTab by remember { mutableStateOf(MentalMathTab.PRACTICE) }
     var selectedOperation by remember { mutableStateOf(MathOperation.ALL) }
     var selectedDifficulty by remember { mutableStateOf(MathDifficulty.BEGINNER) }
+    var showVoiceToneDialog by remember { mutableStateOf(false) }
 
     // Session stats
     var score by remember { mutableIntStateOf(0) }
@@ -228,6 +231,19 @@ fun MentalMathScreen(
             }
         }
 
+        // Voice Tone quick selector bar
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                VoiceToneChipsRow(
+                    voiceManager = viewModel.voiceManager,
+                    onOpenFullSelector = { showVoiceToneDialog = true }
+                )
+            }
+        }
+
         when (selectedTab) {
             MentalMathTab.PRACTICE -> {
                 PracticeTabContent(
@@ -271,6 +287,13 @@ fun MentalMathScreen(
                 GlossaryTabContent(viewModel = viewModel)
             }
         }
+    }
+
+    if (showVoiceToneDialog) {
+        VoiceToneDialog(
+            voiceManager = viewModel.voiceManager,
+            onDismiss = { showVoiceToneDialog = false }
+        )
     }
 }
 

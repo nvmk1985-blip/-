@@ -64,6 +64,7 @@ import com.example.ui.components.AudioWaveVisualizer
 import com.example.ui.components.BilingualAudioButtons
 import com.example.ui.components.SpeechRateChip
 import com.example.ui.components.TtsModeSelector
+import com.example.ui.components.VoiceToneChipsRow
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.viewmodel.MainViewModel
 import com.example.voice.CurrentlySpeakingLanguage
@@ -347,6 +348,12 @@ fun VoiceCallScreen(
                     }
                 }
             }
+
+            // 5 Voice Tones (Natural Tamil & English Pronunciation)
+            VoiceToneChipsRow(
+                voiceManager = viewModel.voiceManager,
+                modifier = Modifier.padding(bottom = 10.dp)
+            )
 
             // Language selector for Speech Recognition in Call
             Row(

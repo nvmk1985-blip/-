@@ -96,6 +96,8 @@ import com.example.ui.components.AudioWaveVisualizer
 import com.example.ui.components.BilingualAudioButtons
 import com.example.ui.components.SpeechRateChip
 import com.example.ui.components.TtsModeSelector
+import com.example.ui.components.VoiceToneChipsRow
+import com.example.ui.components.VoiceToneDialog
 import com.example.ui.components.hasAudioRecordingPermission
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.viewmodel.MainViewModel
@@ -179,6 +181,7 @@ fun VoiceBotScreen(
     val coroutineScope = rememberCoroutineScope()
 
     var showCameraPickerDialog by remember { mutableStateOf(false) }
+    var showVoiceToneDialog by remember { mutableStateOf(false) }
     var pendingCameraFilePath by remember { mutableStateOf<String?>(null) }
     var fullScreenPreviewPath by remember { mutableStateOf<String?>(null) }
 
@@ -494,6 +497,13 @@ fun VoiceBotScreen(
                         onModeChange = { viewModel.setTtsMode(it) }
                     )
                 }
+
+                // 5 Voice Tones (Natural Tamil & English Pronunciation)
+                VoiceToneChipsRow(
+                    voiceManager = viewModel.voiceManager,
+                    modifier = Modifier.padding(top = 6.dp),
+                    onOpenFullSelector = { showVoiceToneDialog = true }
+                )
 
                 // Scenario indicator banner if active
                 if (activeScenario != null) {
@@ -1204,6 +1214,14 @@ fun VoiceBotScreen(
                 showCameraPickerDialog = false
                 viewModel.attachSampleTextbookPage(samplePage, autoAnalyze = autoExplain)
             }
+        )
+    }
+
+    // 5 Voice Tones Selection Dialog
+    if (showVoiceToneDialog) {
+        VoiceToneDialog(
+            voiceManager = viewModel.voiceManager,
+            onDismiss = { showVoiceToneDialog = false }
         )
     }
 
