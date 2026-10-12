@@ -7,10 +7,15 @@ on:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Pesalam AI APK (v2.1 Gemini 3.8 Flash + Camera)
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Repository
@@ -93,9 +98,52 @@ jobs:
       - name: Build Debug APK
         run: gradle assembleDebug --no-daemon --no-configuration-cache
 
+      - name: Prepare APK Release Files
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          cp app/build/outputs/apk/debug/app-debug.apk release-assets/Pesalam-AI.apk
+          cp app/build/outputs/apk/debug/app-debug.apk release-assets/Pesalam-AI-v2.1.apk
+          echo "✅ Release APKs prepared:"
+          ls -lh release-assets/
+
       - name: Upload Pesalam AI APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Pesalam-AI-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      - name: Publish APK to GitHub Releases (Direct Download)
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v2.1' }}
+          name: "Pesalam AI v2.1 (Direct Download APK)"
+          body: |
+            ## 📱 Pesalam AI Android APK v2.1
+            
+            Tamil & English AI Voice & Vision Assistant
+            
+            ### ⬇️ நேரடி பதிவிறக்கம் (Direct APK Download):
+            - **[Pesalam-AI.apk](https://github.com/${{ github.repository }}/releases/download/v2.1/Pesalam-AI.apk)** (பரிந்துரைக்கப்பட்டது / Recommended)
+            - **[Pesalam-AI-v2.1.apk](https://github.com/${{ github.repository }}/releases/download/v2.1/Pesalam-AI-v2.1.apk)**
+            
+            ### 📌 சிறப்பம்சங்கள் (Features):
+            - 🎙️ Tamil & English Real-Time Voice Conversation (இருமொழி குரல் உரையாடல்)
+            - 📷 Live Camera Vision with Gemini 3.8 Flash (நேரடி கேமரா பகுப்பாய்வு)
+            - 🚀 Instant Audio Responses (உடனடி குரல் பதில்கள்)
+            
+            ### 📲 நிறுவும் முறை (Installation):
+            1. Download `Pesalam-AI.apk`.
+            2. Open the file on your Android device.
+            3. If prompted, allow "Install Unknown Apps" (Settings -> Allow from this source).
+          files: |
+            release-assets/Pesalam-AI.apk
+            release-assets/Pesalam-AI-v2.1.apk
+            app/build/outputs/apk/debug/app-debug.apk
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
