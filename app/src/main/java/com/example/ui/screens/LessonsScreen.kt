@@ -75,6 +75,7 @@ fun LessonsScreen(
     viewModel: MainViewModel,
     onStartRoleplay: (RoleplayScenario) -> Unit,
     onNavigateToSavedBooks: (() -> Unit)? = null,
+    onNavigateToMentalMath: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -85,6 +86,7 @@ fun LessonsScreen(
     val tabs = listOf(
         "PDF Course Book" to "PDF பாடப்புத்தகம்",
         "Adi's Book" to "நூல் பயிற்சி",
+        "Mental Math" to "மனக் கணக்கு",
         "Phrases" to "வாக்கியம்",
         "Roleplay" to "உரையாடல்",
         "Grammar" to "இலக்கணம்",
@@ -137,20 +139,24 @@ fun LessonsScreen(
                 viewModel = viewModel,
                 onStartRoleplay = onStartRoleplay
             )
-            2 -> ConversationsTab(
+            2 -> MentalMathScreen(
+                viewModel = viewModel,
+                onBack = { selectedTab = 0 }
+            )
+            3 -> ConversationsTab(
                 viewModel = viewModel,
                 selectedCategory = selectedCategory,
                 savedPhrases = savedPhrases.map { it.englishText }.toSet(),
                 onSelectCategory = { viewModel.selectCategory(it) }
             )
-            3 -> RoleplayTab(
+            4 -> RoleplayTab(
                 onStartScenario = { scenario ->
                     viewModel.startScenario(scenario)
                     onStartRoleplay(scenario)
                 }
             )
-            4 -> GrammarTab(viewModel = viewModel)
-            5 -> MistakesTab(viewModel = viewModel)
+            5 -> GrammarTab(viewModel = viewModel)
+            6 -> MistakesTab(viewModel = viewModel)
         }
     }
 }

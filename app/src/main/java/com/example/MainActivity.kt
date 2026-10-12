@@ -34,6 +34,7 @@ import com.example.ui.components.openAppPermissionSettings
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.HowToSayScreen
 import com.example.ui.screens.LessonsScreen
+import com.example.ui.screens.MentalMathScreen
 import com.example.ui.screens.PronunciationScreen
 import com.example.ui.screens.SavedScreen
 import com.example.ui.screens.VoiceBotScreen
@@ -49,7 +50,8 @@ enum class AppScreen(val title: String, val tamil: String) {
     LESSONS("Lessons", "பாடங்கள்"),
     HOW_TO_SAY("How to Say", "எப்படி சொல்வது"),
     PRONOUNCE("Pronounce", "உச்சரிப்பு"),
-    SAVED("Saved", "சேமித்தவை")
+    SAVED("Saved", "சேமித்தவை"),
+    MENTAL_MATH("Mental Math", "மனக் கணக்கு")
 }
 
 class MainActivity : ComponentActivity() {
@@ -178,7 +180,8 @@ fun MainApp(mainViewModel: MainViewModel = viewModel()) {
                     onNavigateToCall = { currentScreen = AppScreen.CALL },
                     onNavigateToLessons = { currentScreen = AppScreen.LESSONS },
                     onNavigateToHowToSay = { currentScreen = AppScreen.HOW_TO_SAY },
-                    onNavigateToPronounce = { currentScreen = AppScreen.PRONOUNCE }
+                    onNavigateToPronounce = { currentScreen = AppScreen.PRONOUNCE },
+                    onNavigateToMentalMath = { currentScreen = AppScreen.MENTAL_MATH }
                 )
                 AppScreen.BOT -> VoiceBotScreen(
                     viewModel = mainViewModel,
@@ -195,11 +198,18 @@ fun MainApp(mainViewModel: MainViewModel = viewModel()) {
                     },
                     onNavigateToSavedBooks = {
                         currentScreen = AppScreen.SAVED
+                    },
+                    onNavigateToMentalMath = {
+                        currentScreen = AppScreen.MENTAL_MATH
                     }
                 )
                 AppScreen.HOW_TO_SAY -> HowToSayScreen(viewModel = mainViewModel)
                 AppScreen.PRONOUNCE -> PronunciationScreen(viewModel = mainViewModel)
                 AppScreen.SAVED -> SavedScreen(viewModel = mainViewModel)
+                AppScreen.MENTAL_MATH -> MentalMathScreen(
+                    viewModel = mainViewModel,
+                    onBack = { currentScreen = AppScreen.HOME }
+                )
             }
         }
     }

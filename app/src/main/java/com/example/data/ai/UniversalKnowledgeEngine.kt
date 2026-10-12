@@ -176,6 +176,13 @@ object UniversalKnowledgeEngine {
             tip = "ஆங்கிலத்தில் கடிகாரத்தின் முட்களை 'Hands of a clock' (Hour hand, Minute hand) என்று அழைப்பார்கள்!"
         ),
         KnowledgeEntry(
+            keywords = listOf("mental math", "மனக் கணக்கு", "மனக்கணக்கு", "speed math", "வேகக் கணிதம்"),
+            english = "Mental Math means calculating arithmetic problems quickly in your head without using a pencil and paper! In Pesalam AI, you can practice Addition, Subtraction, Multiplication, Division, Word Problems, and Vedic Math shortcuts with step-by-step bilingual explanations by Dhanam Teacher!",
+            tamil = "மனக் கணக்கு (Mental Math) என்பது தாள், பேனா இன்றி மனதிலேயே விரைவாகக் கணிக்கும் கலையாகும்! பேசலாம் ஏஐ செயலியில் கூட்டல் (+), கழித்தல் (−), பெருக்கல் (×), வகுத்தல் (÷), கதை கணக்குகள் மற்றும் வேத கணித உத்திகளை தனம் டீச்சரின் படிமுறை இருமொழி விளக்கத்துடன் பயிலலாம்!",
+            tanglish = "மெண்டல் மேத் மீன்ஸ் கால்குலேட்டிங் அரித்மெடிக் பிராப்ளம்ஸ் குவிக்லி இன் யுவர் ஹெட் விதவுட் யூசிங் பென்சில் அண்ட் பேப்பர்!",
+            tip = "மனக் கணக்கு பயிற்சிப் பகுதியை முகப்புப் பக்கத்தில் உள்ள '🧠 மனக் கணக்கு • Mental Math' அட்டையைத் தட்டி உடனடியாகத் தொடங்கலாம்!"
+        ),
+        KnowledgeEntry(
             keywords = listOf("self introduction", "introduce myself", "என்னை அறிமுகப்படுத்த", "சுய அறிமுகம்"),
             english = "Here is a complete Self-Introduction: 'Good morning everyone! My name is Subiksha, and you can call me Subi. I am 9 years old and studying in 4th standard. My favorite subject is English, and I love reading stories and learning new things. Thank you!'",
             tamil = "அழகான சுய அறிமுகம் (Self-Introduction): 'அனைவருக்கும் காலை வணக்கம்! என் பெயர் சுபிக்சா (சுபி). எனக்கு 9 வயது, நான் 4-ஆம் வகுப்பு படிக்கிறேன். எனக்கு மிகவும் பிடித்த பாடம் ஆங்கிலம். கதைகள் படிப்பதும் புதிய விஷயங்களைக் கற்பதும் எனக்குப் பிடிக்கும். நன்றி!'",

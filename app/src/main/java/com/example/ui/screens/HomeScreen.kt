@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
@@ -76,6 +77,7 @@ fun HomeScreen(
     onNavigateToLessons: () -> Unit,
     onNavigateToHowToSay: () -> Unit,
     onNavigateToPronounce: () -> Unit,
+    onNavigateToMentalMath: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val stats by viewModel.stats.collectAsState()
@@ -225,6 +227,32 @@ fun HomeScreen(
                                 fontSize = 13.sp
                             )
                         }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Mental Math Quick Practice Button
+                        Button(
+                            onClick = onNavigateToMentalMath,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF0F766E)
+                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("hero_mental_math_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Calculate,
+                                contentDescription = "Mental Math",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "🧠 மனக் கணக்கு பயிற்சி (Mental Math • English & Tamil)",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
             }
@@ -340,6 +368,77 @@ fun HomeScreen(
                         value = "5+",
                         label = "Scenarios",
                         tamilLabel = "சூழ்நிலைகள்"
+                    )
+                }
+            }
+        }
+
+        // Mental Math & Bilingual Arithmetic Explanation Card
+        item {
+            Card(
+                onClick = onNavigateToMentalMath,
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF1E1B4B)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("home_mental_math_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color(0xFF4338CA),
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Calculate,
+                                contentDescription = "Mental Math Practice",
+                                tint = Color(0xFFFDE68A),
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "🧠 மனக் கணக்கு • Mental Math",
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 15.sp,
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = EmeraldSuccess
+                            ) {
+                                Text(
+                                    text = "NEW",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = "ஆங்கிலத்தில் கணக்குகள் + தனம் டீச்சரின் இருமொழி படிமுறை விளக்கம் (+ − × ÷ கதை கணக்குகள் & வேக உத்திகள்)",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.92f)
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Open Mental Math",
+                        tint = Color.White
                     )
                 }
             }

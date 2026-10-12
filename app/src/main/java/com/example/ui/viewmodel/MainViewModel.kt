@@ -564,7 +564,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun incrementWordsSpoken(count: Int) {
+    fun incrementWordsSpoken(count: Int) {
         viewModelScope.launch {
             val current = stats.value ?: PracticeStatEntity()
             val updated = current.copy(

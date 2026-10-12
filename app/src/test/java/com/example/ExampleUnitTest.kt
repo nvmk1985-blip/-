@@ -37,4 +37,37 @@ class ExampleUnitTest {
     val score = TutorEngine.calculatePronunciationScore("I am going to school", "completely different banana")
     assertTrue(score < 50)
   }
+
+  @Test
+  fun testMentalMath_curatedQuestionsHaveBilingualSteps() {
+    val questions = com.example.data.math.MentalMathDataSource.curatedQuestions
+    assertTrue(questions.isNotEmpty())
+    for (q in questions) {
+      assertTrue(q.options.contains(q.correctAnswer))
+      assertEquals(4, q.options.size)
+      assertTrue(q.stepsEn.isNotEmpty())
+      assertTrue(q.stepsTa.isNotEmpty())
+      assertTrue(q.mentalTrickEn.isNotBlank())
+      assertTrue(q.mentalTrickTa.isNotBlank())
+    }
+  }
+
+  @Test
+  fun testMentalMath_dynamicGeneration() {
+    val addQ = com.example.data.math.MentalMathDataSource.generateDynamicQuestion(
+      com.example.data.math.MathOperation.ADDITION,
+      com.example.data.math.MathDifficulty.BEGINNER
+    )
+    assertTrue(addQ.options.contains(addQ.correctAnswer))
+    assertTrue(addQ.questionEn.contains("+"))
+    assertTrue(addQ.stepsEn.isNotEmpty())
+    assertTrue(addQ.stepsTa.isNotEmpty())
+
+    val mulQ = com.example.data.math.MentalMathDataSource.generateDynamicQuestion(
+      com.example.data.math.MathOperation.MULTIPLICATION,
+      com.example.data.math.MathDifficulty.INTERMEDIATE
+    )
+    assertTrue(mulQ.options.contains(mulQ.correctAnswer))
+    assertTrue(mulQ.stepsEn.isNotEmpty())
+  }
 }
