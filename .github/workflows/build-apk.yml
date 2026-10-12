@@ -82,13 +82,8 @@ jobs:
             echo "GEMINI_API_KEY=$SECRET_GEMINI_KEY" > .env
             echo "✅ Injected GEMINI_API_KEY from GitHub Secrets into .env"
           fi
-          # Remove any unexported or corrupted binary raster images in drawable/ and legacy mipmap folders
-          # IMPORTANT: Keep adaptive icons ONLY in mipmap-anydpi-v26 (never in mipmap-anydpi without -v26 when minSdk=24)
-          rm -f app/src/main/res/drawable/*.jpg app/src/main/res/drawable/*.png app/src/main/res/drawable/*.webp
-          rm -rf app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi app/src/main/res/mipmap-anydpi
-          if [ ! -s "app/src/main/res/drawable/ic_pesalam_avatar.xml" ]; then
-            cp -f app/src/main/res/drawable/ic_launcher_foreground.xml app/src/main/res/drawable/ic_pesalam_avatar.xml
-          fi
+          # Clean only legacy webp launcher templates if any exist
+          rm -f app/src/main/res/mipmap-*/*.webp
 
       - name: Setup Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v4

@@ -17,5 +17,6 @@ local.properties
 .env
 debug.keystore
 app/src/main/res/drawable/*.jpg
-app/src/main/res/drawable/*.png
-app/src/main/res/mipmap-*/*.png
+# Allow app launcher icon PNGs to be tracked in Git
+!app/src/main/res/drawable/ic_subi_app_icon.png
+!app/src/main/res/mipmap-*/*.png
