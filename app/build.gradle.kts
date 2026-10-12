@@ -135,15 +135,4 @@ dependencies {
   "ksp"(libs.moshi.kotlin.codegen)
 }
 
-val syncApkToBuildOutputs = tasks.register<Copy>("syncApkToBuildOutputs") {
-  from(layout.buildDirectory.dir("outputs/apk/debug")) {
-    include("app-debug.apk")
-  }
-  into(rootProject.layout.projectDirectory.dir(".build-outputs"))
-}
-
-tasks.matching { it.name == "assembleDebug" || it.name == "packageDebug" }.configureEach {
-  finalizedBy(syncApkToBuildOutputs)
-}
-
 

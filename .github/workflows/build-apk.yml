@@ -9,24 +9,68 @@ on:
 
 jobs:
   build:
-    name: Build & Package Pesalam AI APK (v2.1 Gemini 3.8 Flash + Camera)
+    name: Build Pesalam AI APK (v2.1 Gemini 3.8 Flash + Camera)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Prepare Verified Pesalam AI APK (v2.1)
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Accept Android SDK Licenses (Direct Hashes + SDKManager)
+        shell: bash
         run: |
-          mkdir -p app/build/outputs/apk/debug
-          if [ -f ".build-outputs/app-debug.apk" ]; then
-            cp -f .build-outputs/app-debug.apk app/build/outputs/apk/debug/app-debug.apk
-            ls -lh app/build/outputs/apk/debug/app-debug.apk
-            echo "✅ Pesalam AI v2.1 APK (Gemini 3.8 Flash + Textbook Camera) verified and ready!"
-          else
-            echo "❌ Error: .build-outputs/app-debug.apk not found in repository."
-            exit 1
+          set +o pipefail
+          for SDK_DIR in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" "/usr/local/lib/android/sdk"; do
+            if [ -n "$SDK_DIR" ] && [ -d "$SDK_DIR" ]; then
+              mkdir -p "$SDK_DIR/licenses"
+              printf "\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n859f317696f67ef3d7f30a50a5560e7834b43903\n" > "$SDK_DIR/licenses/android-sdk-license"
+              printf "\n84831b9409646a918e30573bab4c9c91346d8abd\n504667f4c0de7af1a06de9f4b1727b84351f2910\n" > "$SDK_DIR/licenses/android-sdk-preview-license"
+              printf "\n601085b94cd77f0b54ff86406957099ebe79c4d6\n" > "$SDK_DIR/licenses/android-googletv-license"
+              printf "\nceff83576aac4f7f37cb98fe189e9fb3c49d3b81\n" > "$SDK_DIR/licenses/android-googlexr-license"
+              printf "\n859f317696f67ef3d7f30a50a5560e7834b43903\n" > "$SDK_DIR/licenses/android-sdk-arm-dbt-license"
+              printf "\n33b6a2b64607f11b759f320ef9dff4ae5c47d97a\n" > "$SDK_DIR/licenses/google-gdk-license"
+              printf "\ne9acab5b5fbb560a72cfaecce8946896ff6aab9d\n" > "$SDK_DIR/licenses/mips-android-sysimage-license"
+            fi
+          done
+          if [ -x "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" ]; then
+            yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
           fi
+          echo "✅ All Android SDK & Preview licenses accepted."
+
+      - name: Restore debug.keystore & .env Configuration
+        shell: bash
+        env:
+          SECRET_GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ ! -f "debug.keystore" ] && [ -f "debug.keystore.base64" ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+            echo "✅ Decoded debug.keystore from debug.keystore.base64"
+          fi
+          if [ ! -f ".env" ]; then
+            if [ -f ".env.example" ]; then
+              cp .env.example .env
+            else
+              echo "GEMINI_API_KEY=MY_GEMINI_API_KEY" > .env
+            fi
+          fi
+          if [ -n "$SECRET_GEMINI_KEY" ]; then
+            echo "GEMINI_API_KEY=$SECRET_GEMINI_KEY" > .env
+            echo "✅ Injected GEMINI_API_KEY from GitHub Secrets into .env"
+          fi
+
+      - name: Setup Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Build Debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload Pesalam AI APK Artifact
         uses: actions/upload-artifact@v4
