@@ -354,13 +354,13 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text(
-                                    text = "5 குரல் தொனிகள் (5 Voice Tones)",
+                                    text = "5 பெண் டப்பிங் குரல்கள் (5 Voices)",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "இயல்பான தமிழ் & ஆங்கில உச்சரிப்பு",
+                                    text = "டப்பிங் கலைஞர்களின் இயல்பான பேச்சுத் தமிழ்",
                                     fontSize = 11.5.sp,
                                     color = MaterialTheme.colorScheme.primary
                                 )

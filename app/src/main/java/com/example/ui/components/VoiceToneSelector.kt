@@ -2,7 +2,6 @@ package com.example.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +23,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -32,13 +32,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -81,7 +79,7 @@ fun VoiceToneChipsRow(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "5 Tones:",
+                    text = "5 பெண் குரல்கள்:",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -134,7 +132,7 @@ fun VoiceToneChipsRow(
 }
 
 /**
- * Full Dialog to preview and configure all 5 Voice Tones with details
+ * Full Dialog to preview and configure all 5 Female Tamil Dubbing Artist Voices with Spoken Tamil details
  */
 @Composable
 fun VoiceToneDialog(
@@ -151,13 +149,13 @@ fun VoiceToneDialog(
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp)
+                .padding(vertical = 12.dp)
                 .testTag("voice_tone_dialog")
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(18.dp)
             ) {
                 // Header
                 Row(
@@ -169,7 +167,7 @@ fun VoiceToneDialog(
                         Surface(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(38.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
@@ -183,14 +181,14 @@ fun VoiceToneDialog(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "🎙️ 5 குரல் தொனிகள் (5 Voice Tones)",
+                                text = "🎙️ 5 பெண் டப்பிங் குரல்கள்",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "இயல்பான தமிழ் & ஆங்கில உச்சரிப்பு",
-                                fontSize = 11.5.sp,
+                                text = "டப்பிங் கலைஞர்களின் இயல்பான பேச்சுத் தமிழ்",
+                                fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -204,17 +202,17 @@ fun VoiceToneDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "விரும்பிய குரல் தொனியைத் தட்டி மாதிரியைக் கேட்டுத் தேர்ந்தெடுங்கள்:",
-                    fontSize = 12.sp,
+                    text = "விரும்பிய பெண் டப்பிங் கலைஞரின் குரலைத் தட்டி மாதிரியைக் கேட்டுத் தேர்ந்தெடுங்கள்:",
+                    fontSize = 11.5.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // List of 5 Tones
+                // List of 5 Female Dubbing Voices
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -239,13 +237,13 @@ fun VoiceToneDialog(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(12.dp),
+                                    .padding(10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Surface(
                                     shape = CircleShape,
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
-                                    modifier = Modifier.size(38.dp)
+                                    modifier = Modifier.size(36.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(text = tone.emoji, fontSize = 18.sp)
@@ -259,20 +257,27 @@ fun VoiceToneDialog(
                                         Text(
                                             text = tone.titleTa,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 13.5.sp,
+                                            fontSize = 13.sp,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "(${tone.titleEn})",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                        ) {
+                                            Text(
+                                                text = tone.dubbingArtistTa,
+                                                fontSize = 9.5.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                            )
+                                        }
                                     }
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = tone.descriptionTa,
-                                        fontSize = 11.sp,
+                                        fontSize = 10.5.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -282,14 +287,14 @@ fun VoiceToneDialog(
                                 Surface(
                                     shape = CircleShape,
                                     color = if (isSelected) EmeraldSuccess else MaterialTheme.colorScheme.surfaceVariant,
-                                    modifier = Modifier.size(32.dp)
+                                    modifier = Modifier.size(30.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = if (isSelected) Icons.Default.Check else Icons.AutoMirrored.Filled.VolumeUp,
                                             contentDescription = "Select or preview tone",
                                             tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(15.dp)
                                         )
                                     }
                                 }
@@ -298,7 +303,7 @@ fun VoiceToneDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
