@@ -59,6 +59,7 @@ enum class AppScreen(val title: String, val tamil: String) {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.example.data.api.GeminiApiKeyManager.init(this)
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {

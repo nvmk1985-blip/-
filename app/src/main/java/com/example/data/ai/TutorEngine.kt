@@ -11,6 +11,7 @@ import com.example.data.api.PartPayload
 import com.example.data.db.ChatMessageEntity
 import com.example.util.SampleTextbookPage
 import com.example.util.TextbookImageHelper
+import com.example.data.api.GeminiApiKeyManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -68,7 +69,7 @@ Respond strictly in valid JSON format:
             "Please read this textbook page photo, explain the lesson clearly in English and Tamil, and solve any questions shown on the page."
         }
 
-        val apiKey = try { BuildConfig.GEMINI_API_KEY } catch (_: Exception) { "" }
+        val apiKey = GeminiApiKeyManager.getEffectiveApiKey()
         val base64Jpeg = TextbookImageHelper.fileToBase64Jpeg(imagePath)
 
         if (apiKey.isNotBlank() && apiKey != "MY_GEMINI_API_KEY" && !base64Jpeg.isNullOrBlank()) {
@@ -222,7 +223,7 @@ Return strictly valid JSON with keys: "english", "tamil", "tanglish", "tip".
         conversationHistory: List<ChatMessageEntity> = emptyList(),
         preferredModel: GeminiModelOption = GeminiModelOption.GEMINI_3_8_FLASH
     ): TutorResponse = withContext(Dispatchers.IO) {
-        val apiKey = try { BuildConfig.GEMINI_API_KEY } catch (_: Exception) { "" }
+        val apiKey = GeminiApiKeyManager.getEffectiveApiKey()
         if (apiKey.isNotBlank() && apiKey != "MY_GEMINI_API_KEY") {
             try {
                 // Build strictly alternating user -> model turns starting with a 'user' message
@@ -749,7 +750,7 @@ Return strictly valid JSON with keys: "english", "tamil", "tanglish", "tip".
         tamilText: String,
         preferredModel: GeminiModelOption = GeminiModelOption.GEMINI_3_8_FLASH
     ): Map<String, String> = withContext(Dispatchers.IO) {
-        val apiKey = try { BuildConfig.GEMINI_API_KEY } catch (_: Exception) { "" }
+        val apiKey = GeminiApiKeyManager.getEffectiveApiKey()
         if (apiKey.isNotBlank() && apiKey != "MY_GEMINI_API_KEY") {
             try {
                 val prompt = """

@@ -105,13 +105,9 @@ fun HomeScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // ================= ITEM 1: குழந்தைகள் & ரோபோ கற்றல் தலைப்பு =================
+        // ================= ITEM 1: குழந்தைகள் & ரோபோ கற்றல் தலைப்பு (Gemini AI நேரடி உரையாடல்) =================
         Card(
-            onClick = {
-                viewModel.voiceManager.speakTamil(
-                    "வணக்கம்! பேசலாம் ஏஐ செயலிக்கு அன்புடன் வரவேற்கிறேன். கீழே உள்ள பட்டியலில் நீங்கள் விரும்பியதைத் தேர்ந்தெடுக்கலாம்!"
-                )
-            },
+            onClick = onNavigateToBot,
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
             border = BorderStroke(1.2.dp, Color(0xFF38BDF8).copy(alpha = 0.45f)),
@@ -164,7 +160,7 @@ fun HomeScreen(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                text = "பேசலாம் AI • Pesalam AI",
+                                text = "🤖 Gemini AI உரையாடல் • தட்டவும்",
                                 color = Color(0xFFFDE68A),
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold,

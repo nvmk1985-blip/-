@@ -90,10 +90,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
+import com.example.data.api.GeminiApiKeyManager
 import com.example.data.api.GeminiModelOption
 import com.example.data.db.ChatMessageEntity
 import com.example.ui.components.AudioWaveVisualizer
 import com.example.ui.components.BilingualAudioButtons
+import com.example.ui.components.GeminiApiKeyDialog
 import com.example.ui.components.SpeechRateChip
 import com.example.ui.components.TtsModeSelector
 import com.example.ui.components.VoiceToneChipsRow
@@ -182,6 +184,7 @@ fun VoiceBotScreen(
 
     var showCameraPickerDialog by remember { mutableStateOf(false) }
     var showVoiceToneDialog by remember { mutableStateOf(false) }
+    var showApiKeyDialog by remember { mutableStateOf(false) }
     var pendingCameraFilePath by remember { mutableStateOf<String?>(null) }
     var fullScreenPreviewPath by remember { mutableStateOf<String?>(null) }
 
@@ -475,6 +478,30 @@ fun VoiceBotScreen(
                                 .height(28.dp)
                                 .testTag("model_chip_${modelOption.id}")
                         )
+                    }
+
+                    item {
+                        val hasKey = GeminiApiKeyManager.hasValidApiKey(context)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (hasKey) Color(0xFF065F46) else MaterialTheme.colorScheme.surfaceVariant,
+                            onClick = { showApiKeyDialog = true },
+                            modifier = Modifier
+                                .height(28.dp)
+                                .testTag("api_key_settings_chip")
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            ) {
+                                Text(
+                                    text = if (hasKey) "🔑 Gemini Live ✅" else "🔑 API Key",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (hasKey) Color(0xFF6EE7B7) else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -1222,6 +1249,13 @@ fun VoiceBotScreen(
         VoiceToneDialog(
             voiceManager = viewModel.voiceManager,
             onDismiss = { showVoiceToneDialog = false }
+        )
+    }
+
+    // Gemini API Key Settings Dialog
+    if (showApiKeyDialog) {
+        GeminiApiKeyDialog(
+            onDismiss = { showApiKeyDialog = false }
         )
     }
 

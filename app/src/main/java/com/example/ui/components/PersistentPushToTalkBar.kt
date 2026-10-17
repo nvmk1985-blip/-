@@ -244,10 +244,9 @@ fun PersistentPushToTalkBottomBar(
             ) {
                 val leftNavItems = listOf(
                     AppScreen.HOME to Icons.Default.Home,
-                    AppScreen.BOT to Icons.AutoMirrored.Filled.Chat
+                    AppScreen.LESSONS to Icons.AutoMirrored.Filled.MenuBook
                 )
                 val rightNavItems = listOf(
-                    AppScreen.LESSONS to Icons.AutoMirrored.Filled.MenuBook,
                     AppScreen.HOW_TO_SAY to Icons.Default.Translate,
                     AppScreen.SAVED to Icons.Default.Bookmark
                 )
