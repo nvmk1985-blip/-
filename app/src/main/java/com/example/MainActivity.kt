@@ -35,6 +35,7 @@ import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.HowToSayScreen
 import com.example.ui.screens.LessonsScreen
 import com.example.ui.screens.MentalMathScreen
+import com.example.ui.screens.PdfBookshelfScreen
 import com.example.ui.screens.PronunciationScreen
 import com.example.ui.screens.SavedScreen
 import com.example.ui.screens.VoiceBotScreen
@@ -51,7 +52,8 @@ enum class AppScreen(val title: String, val tamil: String) {
     HOW_TO_SAY("How to Say", "எப்படி சொல்வது"),
     PRONOUNCE("Pronounce", "உச்சரிப்பு"),
     SAVED("Saved", "சேமித்தவை"),
-    MENTAL_MATH("Mental Math", "மனக் கணக்கு")
+    MENTAL_MATH("Mental Math", "மனக் கணக்கு"),
+    PDF_BOOKSHELF("PDF Bookshelf", "PDF புத்தகம்")
 }
 
 class MainActivity : ComponentActivity() {
@@ -181,7 +183,8 @@ fun MainApp(mainViewModel: MainViewModel = viewModel()) {
                     onNavigateToLessons = { currentScreen = AppScreen.LESSONS },
                     onNavigateToHowToSay = { currentScreen = AppScreen.HOW_TO_SAY },
                     onNavigateToPronounce = { currentScreen = AppScreen.PRONOUNCE },
-                    onNavigateToMentalMath = { currentScreen = AppScreen.MENTAL_MATH }
+                    onNavigateToMentalMath = { currentScreen = AppScreen.MENTAL_MATH },
+                    onNavigateToPdfBookshelf = { currentScreen = AppScreen.PDF_BOOKSHELF }
                 )
                 AppScreen.BOT -> VoiceBotScreen(
                     viewModel = mainViewModel,
@@ -210,6 +213,12 @@ fun MainApp(mainViewModel: MainViewModel = viewModel()) {
                     viewModel = mainViewModel,
                     onBack = { currentScreen = AppScreen.HOME }
                 )
+                AppScreen.PDF_BOOKSHELF -> PdfBookshelfScreen(
+                    viewModel = mainViewModel,
+                    onBack = { currentScreen = AppScreen.HOME },
+                    onNavigateToMentalMath = { currentScreen = AppScreen.MENTAL_MATH }
+                )
+
             }
         }
     }

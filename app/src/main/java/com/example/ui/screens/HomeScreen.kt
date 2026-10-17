@@ -1,5 +1,12 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,36 +22,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Calculate
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Coffee
-import androidx.compose.material.icons.filled.DirectionsBus
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Handshake
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.RecordVoiceOver
-import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material.icons.filled.Work
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,828 +50,267 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.data.lessons.LessonDataSource
-import com.example.ui.components.ScoreBadge
-import com.example.ui.components.TtsSpeakerButton
 import com.example.ui.components.VoiceToneChipsRow
 import com.example.ui.components.VoiceToneDialog
+import com.example.ui.theme.AmberAccent
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.viewmodel.MainViewModel
 
+/**
+ * Clean, centered launcher Home Screen strictly adhering to the user's layout specification:
+ * 1) பேசலாம் AI சின்னம் (Pesalam AI Logo / Avatar Header)
+ * 2) பாடப்புத்தக ஸ்கேனர் (Textbook Camera Scanner)
+ * 3) மனக் கணக்கு (Mental Math)
+ * 4) Spoken English via தமிழ்
+ * 5) PDF புத்தக அடுக்கு (PDF Bookshelf)
+ * 6) குரல் அலைவரிசை (Voice wave Live Call)
+ */
 @Composable
 fun HomeScreen(
     viewModel: MainViewModel,
     onNavigateToBot: () -> Unit,
     onNavigateToCall: () -> Unit,
     onNavigateToLessons: () -> Unit,
-    onNavigateToHowToSay: () -> Unit,
-    onNavigateToPronounce: () -> Unit,
+    onNavigateToHowToSay: () -> Unit = {},
+    onNavigateToPronounce: () -> Unit = {},
     onNavigateToMentalMath: () -> Unit = {},
+    onNavigateToPdfBookshelf: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val stats by viewModel.stats.collectAsState()
     val context = LocalContext.current
     var showVoiceToneDialog by remember { mutableStateOf(false) }
+    val selectedVoiceTone by viewModel.voiceManager.selectedVoiceTone.collectAsState()
+
+    // Breathing pulse for voice wave item
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.97f,
+        targetValue = 1.03f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseScale"
+    )
 
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(Color(0xFF0F172A))
+            .padding(horizontal = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Spacer(modifier = Modifier.height(8.dp))
-            // Hero Card with Bot Avatar and Greeting
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("hero_card")
-            ) {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Text(
-                                        text = "⚡ Gemini 3.8 Flash • 👩‍🏫 தனம் டீச்சர் (சுபி, 9 வயது)",
-                                        color = Color.White,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "Hi Subiksha (Subi)! 🌟\nDhanam Teacher (Gemini 3.8 Flash)",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                                Text(
-                                    text = "எதை கேட்டாலும் பதிலளிக்கும் AI Voice Bot & தமிழ் வழி ஆங்கிலப் பயிற்சி",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
-                                )
-                            }
-
-                            // Bot avatar image
-                            Box(
-                                modifier = Modifier
-                                    .size(72.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_pesalam_avatar),
-                                    contentDescription = "Dhanam Teacher AI Companion",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Action Buttons: Voice Bot & Live Voice Call
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Button(
-                                onClick = onNavigateToCall,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = EmeraldSuccess
-                                ),
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("live_call_button")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Call,
-                                    contentDescription = "Live Voice Call",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Call 3.8 Flash", fontWeight = FontWeight.Bold)
-                            }
-
-                            Button(
-                                onClick = onNavigateToBot,
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("voice_chat_button")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Chat,
-                                    contentDescription = "Voice Chat",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Ask Anything", fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        // Direct Textbook Camera Doubt Solver button inside the Hero Card
-                        Button(
-                            onClick = {
-                                viewModel.requestOpenCameraSheet()
-                                onNavigateToBot()
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.tertiary
-                            ),
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("hero_textbook_camera_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CameraAlt,
-                                contentDescription = "Textbook Camera",
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "📷 பாடப்புத்தக போட்டோ & சந்தேகம் (Textbook Scan)",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Mental Math Quick Practice Button
-                        Button(
-                            onClick = onNavigateToMentalMath,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF0F766E)
-                            ),
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("hero_mental_math_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Calculate,
-                                contentDescription = "Mental Math",
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "🧠 மனக் கணக்கு பயிற்சி (Mental Math • English & Tamil)",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
-                        }
-                    }
-                }
-            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Subiksha (Subi, Age 9) Personal Self-Introduction Card with Audio
-        item {
-            val subiIntroEn = "Hello! My name is Subiksha, and you can call me Subi. I am a 9-year-old girl. My English teacher's name is Dhanam!"
-            val subiIntroTa = "வணக்கம்! என் பெயர் சுபிக்சா, என்னை சுபி என்று அழைக்கலாம். நான் 9 வயது சிறுமி. என் ஆங்கில டீச்சர் பெயர் தனம்!"
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.75f)
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("subi_profile_card")
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "👧 சுபிக்சா (சுபி, 9 வயது) - சுய அறிமுகம்",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 8.dp)
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable {
-                                viewModel.voiceManager.speakBilingual(subiIntroEn, subiIntroTa)
-                            }
-                        ) {
-                            Text(
-                                text = "🔊 கேள் (Listen)",
-                                color = Color.White,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = subiIntroEn,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "🗣️ உச்சரிப்பு: ஹலோ! மை நேம் இஸ் சுபிக்சா, அண்ட் யூ கேன் கால் மீ சுபி. ஐ அம் எ நைன் இயர் ஓல்ட் கேர்ள். மை இங்கிலீஷ் டீச்சர்ஸ் நேம் இஸ் தனம்!",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "🇮🇳 $subiIntroTa",
-                        fontSize = 12.5.sp,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.9f)
-                    )
-                }
-            }
-        }
-
-        // 5 Voice Tones (Natural Tamil & English Pronunciation)
-        item {
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("home_voice_tones_card")
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = "🎙️", fontSize = 20.sp)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = "5 பெண் டப்பிங் குரல்கள் (5 Voices)",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "டப்பிங் கலைஞர்களின் இயல்பான பேச்சுத் தமிழ்",
-                                    fontSize = 11.5.sp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable { showVoiceToneDialog = true }
-                        ) {
-                            Text(
-                                text = "அனைத்தும் ➡️",
-                                color = Color.White,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    VoiceToneChipsRow(
-                        voiceManager = viewModel.voiceManager,
-                        onOpenFullSelector = { showVoiceToneDialog = true }
-                    )
-                }
-            }
-        }
-
-        // Daily Progress & Spoken Stats
-        item {
-            ElevatedCard(
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    StatItem(
-                        icon = Icons.Default.RecordVoiceOver,
-                        value = "${stats?.totalWordsSpoken ?: 0}",
-                        label = "Words Spoken",
-                        tamilLabel = "பேசிய வார்த்தைகள்"
-                    )
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(36.dp)
-                            .background(MaterialTheme.colorScheme.outlineVariant)
-                    )
-                    StatItem(
-                        icon = Icons.Default.EmojiEvents,
-                        value = "${stats?.streakDays ?: 1} Days",
-                        label = "Streak",
-                        tamilLabel = "தொடர் பயிற்சி"
-                    )
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(36.dp)
-                            .background(MaterialTheme.colorScheme.outlineVariant)
-                    )
-                    StatItem(
-                        icon = Icons.Default.CheckCircle,
-                        value = "5+",
-                        label = "Scenarios",
-                        tamilLabel = "சூழ்நிலைகள்"
-                    )
-                }
-            }
-        }
-
-        // Mental Math & Bilingual Arithmetic Explanation Card
-        item {
-            Card(
-                onClick = onNavigateToMentalMath,
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1E1B4B)
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("home_mental_math_card")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color(0xFF4338CA),
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Calculate,
-                                contentDescription = "Mental Math Practice",
-                                tint = Color(0xFFFDE68A),
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "🧠 மனக் கணக்கு • Mental Math",
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 15.sp,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = EmeraldSuccess
-                            ) {
-                                Text(
-                                    text = "NEW",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                        Text(
-                            text = "📄 100 ரகசியங்கள் PDF (1-7 ஆம் வகுப்பு) • 1-20 வாய்ப்பாடுகள் • இருமொழி விளக்கங்கள்",
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.92f)
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Open Mental Math",
-                        tint = Color.White
-                    )
-                }
-            }
-        }
-
-        // Textbook Camera Photo Explanation & Doubt Solver Card
+        // ================= ITEM 1: பேசலாம் AI சின்னம் =================
         item {
             Card(
                 onClick = {
+                    viewModel.voiceManager.speakTamil(
+                        "வணக்கம்! நான் உங்கள் தனம் டீச்சர். பேசலாம் ஏஐ செயலிக்கு அன்புடன் வரவேற்கிறேன். கீழே உள்ள பட்டியலில் நீங்கள் விரும்பியதைத் தேர்ந்தெடுக்கலாம்!"
+                    )
+                },
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF1E293B)
+                ),
+                border = BorderStroke(1.5.dp, Color(0xFF38BDF8).copy(alpha = 0.4f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("item_pesalam_ai_logo")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Logo Avatar
+                    Box(
+                        modifier = Modifier
+                            .size(86.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(Color(0xFF38BDF8).copy(alpha = 0.35f), Color(0xFF1E293B))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_pesalam_avatar),
+                            contentDescription = "பேசலாம் AI சின்னம்",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(78.dp)
+                                .clip(CircleShape)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Surface(
+                        color = Color(0xFF4338CA),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "பேசலாம் AI சின்னம்",
+                            color = Color(0xFFFDE68A),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "பேசலாம் AI • Pesalam AI",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White
+                    )
+
+                    Text(
+                        text = "சுபி (9 வயது) & தனம் டீச்சர் • தமிழ் வழி கல்வி வழிகாட்டி",
+                        fontSize = 12.5.sp,
+                        color = Color(0xFF94A3B8),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Voice Tone Selector compact trigger
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF0F172A),
+                        border = BorderStroke(1.dp, Color(0xFF334155)),
+                        modifier = Modifier
+                            .clickable { showVoiceToneDialog = true }
+                            .padding(horizontal = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = selectedVoiceTone.emoji, fontSize = 14.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "குரல்: ${selectedVoiceTone.titleTa} (${selectedVoiceTone.titleEn})",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF38BDF8)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "▼", fontSize = 9.sp, color = Color(0xFF94A3B8))
+                        }
+                    }
+                }
+            }
+        }
+
+        // ================= ITEM 2: பாடப்புத்தக ஸ்கேனர் =================
+        item {
+            HomeNavPill(
+                title = "பாடப்புத்தக ஸ்கேனர்",
+                subtitle = "புத்தக பக்கங்களை படம் பிடித்து நேரடி சந்தேகம் தீர்க்க",
+                tag = "CAMERA AI",
+                icon = Icons.Default.CameraAlt,
+                accentColor = Color(0xFFEC4899),
+                containerColor = Color(0xFF1E293B),
+                testTag = "item_textbook_scanner",
+                onClick = {
                     viewModel.requestOpenCameraSheet()
                     onNavigateToBot()
-                },
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF4F46E5)
-                ),
+                }
+            )
+        }
+
+        // ================= ITEM 3: மனக் கணக்கு (Mental Math) =================
+        item {
+            HomeNavPill(
+                title = "மனக் கணக்கு (Mental Math)",
+                subtitle = "1-7 ஆம் வகுப்பு மாணவர்களுக்கான 100 ரகசியங்கள், வாய்ப்பாடுகள் & பயிற்சி",
+                tag = "100 SECRETS",
+                icon = Icons.Default.Calculate,
+                accentColor = Color(0xFFF59E0B),
+                containerColor = Color(0xFF1E293B),
+                testTag = "item_mental_math",
+                onClick = onNavigateToMentalMath
+            )
+        }
+
+        // ================= ITEM 4: Spoken English via தமிழ் =================
+        item {
+            HomeNavPill(
+                title = "Spoken English via தமிழ்",
+                subtitle = "அன்றாட தமிழ் வழி ஆங்கில உரையாடல், பாடங்கள் & உச்சரிப்பு",
+                tag = "DAILY LESSONS",
+                icon = Icons.AutoMirrored.Filled.MenuBook,
+                accentColor = Color(0xFF10B981),
+                containerColor = Color(0xFF1E293B),
+                testTag = "item_spoken_english",
+                onClick = onNavigateToLessons
+            )
+        }
+
+        // ================= ITEM 5: PDF புத்தக அடுக்கு =================
+        item {
+            HomeNavPill(
+                title = "PDF புத்தக அடுக்கு",
+                subtitle = "100 மனக்கணக்கு ரகசியங்கள், 1-20 வாய்ப்பாடுகள் & அனைத்து PDF புத்தகங்கள்",
+                tag = "PDF E-BOOKS",
+                icon = Icons.Default.PictureAsPdf,
+                accentColor = Color(0xFF8B5CF6),
+                containerColor = Color(0xFF1E293B),
+                testTag = "item_pdf_bookshelf",
+                onClick = onNavigateToPdfBookshelf
+            )
+        }
+
+        // ================= ITEM 6: குரல் அலைவரிசை (Voice wave) =================
+        item {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("home_textbook_camera_card")
+                    .scale(pulseScale)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.2f),
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.CameraAlt,
-                                contentDescription = "Textbook Camera Doubt Solver",
-                                tint = Color(0xFFFDE68A),
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "📷 பாடப்புத்தக போட்டோ & சந்தேகம்",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = Color.White
-                        )
-                        Text(
-                            text = "புத்தகப் பக்கத்தை போட்டோ எடுத்து தமிழ் & ஆங்கில விளக்கம், உச்சரிப்பு மற்றும் சந்தேகம் கேட்கலாம்!",
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.92f)
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Open Textbook Camera",
-                        tint = Color.White
-                    )
-                }
-            }
-        }
-
-        // Spoken English via Tamil - Complete 30-Day PDF Course Book Card
-        item {
-            Card(
-                onClick = onNavigateToLessons,
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF0F766E)
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("spoken_english_pdf_course_card")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.2f),
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.PictureAsPdf,
-                                contentDescription = "Spoken English via Tamil PDF Book",
-                                tint = Color(0xFFFDE68A),
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "📕 Spoken English via Tamil (PDF Book)",
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 15.sp,
-                            color = Color.White
-                        )
-                        Text(
-                            text = "தமிழ் வழியே ஸ்போக்கன் இங்கிலீஷ் முழுப் பாடப்புத்தகம் (18 PDF பக்கங்கள் • 10 யூனிட்கள் • தனம் டீச்சர் & சுபிக்சா)",
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.92f)
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Open PDF Course Book",
-                        tint = Color.White
-                    )
-                }
-            }
-        }
-
-        // Adi's Book Featured Course Card
-        item {
-            Card(
-                onClick = onNavigateToLessons,
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("adis_book_course_card")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(46.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.EmojiEvents,
-                                contentDescription = "Adi's Book Course",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Adi's Book: Spoken Tamil & English 📖",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Text(
-                            text = "62 பாடங்கள் • 12 உரையாடல்கள் • 6 நீதிக்கதைகள் • இலக்கணம் (ஆடியோவுடன் பயில)",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Open Adi's Book Course",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-        }
-
-        item {
-            Card(
-                onClick = onNavigateToHowToSay,
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("how_to_say_card")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(46.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Translate,
-                                contentDescription = "How to say",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "How to Say in English? 🗣️",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Text(
-                            text = "தமிழில் சொன்னால் 3 ஸ்டைலில் ஆங்கிலம் தரும்!",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Go to how to say",
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-            }
-        }
-
-        // Daily Tamil Mistake Buster
-        item {
-            val sampleMistake = LessonDataSource.commonMistakes.first()
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Lightbulb,
-                            contentDescription = "Mistake Buster",
-                            tint = Color(0xFFD97706),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "வழக்கமான தவறும் தீர்வும் (Mistake Buster)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "❌ " + sampleMistake.wrong,
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "✅ " + sampleMistake.correct,
-                            fontSize = 14.sp,
-                            color = EmeraldSuccess,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TtsSpeakerButton(
-                            textToSpeak = sampleMistake.correct,
-                            onSpeak = { viewModel.voiceManager.speak(it) },
-                            modifier = Modifier.size(36.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = sampleMistake.whyTamil,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-
-        // Popular Topics
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Spoken English Lessons",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "View All",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp,
-                    modifier = Modifier.clickable { onNavigateToLessons() }
+                HomeNavPill(
+                    title = "குரல் அலைவரிசை (Voice wave)",
+                    subtitle = "தனம் டீச்சர் & சுபியுடன் நேரடி அனிமேஷன் குரல் அலைவரிசை உரையாடல்",
+                    tag = "LIVE CALL",
+                    icon = Icons.Default.GraphicEq,
+                    accentColor = Color(0xFF06B6D4),
+                    containerColor = Color(0xFF1E1B4B),
+                    testTag = "item_voice_wave",
+                    onClick = onNavigateToCall
                 )
             }
         }
 
         item {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(LessonDataSource.categories) { category ->
-                    LessonCardCompact(
-                        category = category,
-                        onClick = {
-                            viewModel.selectCategory(category)
-                            onNavigateToLessons()
-                        }
-                    )
-                }
-            }
-        }
-
-        // Pronunciation Spotlight
-        item {
-            Card(
-                onClick = onNavigateToPronounce,
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.RecordVoiceOver,
-                        contentDescription = "Pronunciation",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Pronunciation Arena (உச்சரிப்பு)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                        Text(
-                            text = "V vs W, P vs F, 'S' sound உச்சரிப்பு பயிற்சிகள்",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Go to pronunciation",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(30.dp))
         }
     }
 
+    // Voice Tone Full Selection Dialog
     if (showVoiceToneDialog) {
         VoiceToneDialog(
             voiceManager = viewModel.voiceManager,
@@ -886,89 +319,90 @@ fun HomeScreen(
     }
 }
 
+/**
+ * Clean, centered pill button matching the user's sketch layout.
+ */
 @Composable
-fun StatItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    value: String,
-    label: String,
-    tamilLabel: String
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(text = value, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-        Text(text = label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(text = tamilLabel, fontSize = 9.sp, color = MaterialTheme.colorScheme.outline)
-    }
-}
-
-@Composable
-fun LessonCardCompact(
-    category: com.example.data.lessons.LessonCategory,
+private fun HomeNavPill(
+    title: String,
+    subtitle: String,
+    tag: String,
+    icon: ImageVector,
+    accentColor: Color,
+    containerColor: Color,
+    testTag: String,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = BorderStroke(1.2.dp, accentColor.copy(alpha = 0.45f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         modifier = Modifier
-            .width(160.dp)
-            .height(140.dp)
+            .fillMaxWidth()
+            .testTag(testTag)
     ) {
-        Column(
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            val icon = when (category.id) {
-                "greetings" -> Icons.Default.Handshake
-                "tea_food" -> Icons.Default.Coffee
-                "travel" -> Icons.Default.DirectionsBus
-                "office" -> Icons.Default.Work
-                else -> Icons.AutoMirrored.Filled.Chat
-            }
-
             Surface(
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(36.dp)
+                color = accentColor.copy(alpha = 0.18f),
+                modifier = Modifier.size(46.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
-                        contentDescription = category.titleEnglish,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
+                        contentDescription = title,
+                        tint = accentColor,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
 
-            Column {
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = title,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = accentColor.copy(alpha = 0.25f)
+                    ) {
+                        Text(
+                            text = tag,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = accentColor,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = category.titleEnglish,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    maxLines = 1
-                )
-                Text(
-                    text = category.titleTamil,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1
-                )
-                Text(
-                    text = "${category.phrases.size} phrases",
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.outline
+                    text = subtitle,
+                    fontSize = 11.5.sp,
+                    color = Color(0xFF94A3B8),
+                    lineHeight = 16.sp
                 )
             }
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Open $title",
+                tint = accentColor.copy(alpha = 0.8f),
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }
