@@ -494,9 +494,8 @@ fun HomeScreen(
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(3.dp))
                         Text(
-                            text = "ஆங்கிலத்தில் கணக்குகள் + தனம் டீச்சரின் இருமொழி படிமுறை விளக்கம் (+ − × ÷ கதை கணக்குகள் & வேக உத்திகள்)",
+                            text = "📄 100 ரகசியங்கள் PDF (1-7 ஆம் வகுப்பு) • 1-20 வாய்ப்பாடுகள் • இருமொழி விளக்கங்கள்",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.92f)
                         )

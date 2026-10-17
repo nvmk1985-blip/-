@@ -76,7 +76,7 @@ class ExampleUnitTest {
     val tones = com.example.voice.VoiceTone.entries
     assertEquals(5, tones.size)
     assertEquals(
-      listOf("teacher", "subi", "storyteller", "coach", "presenter"),
+      listOf("teacher", "heroine_nila", "subi", "rj_ananya", "kavitha_akka"),
       tones.map { it.id }
     )
     for (tone in tones) {
@@ -85,6 +85,21 @@ class ExampleUnitTest {
       assertTrue(tone.titleTa.isNotBlank())
       assertTrue(tone.sampleTextTa.isNotBlank())
       assertTrue(tone.sampleTextEn.isNotBlank())
+    }
+  }
+
+  @Test
+  fun testOneHundredMentalMathSecrets() {
+    val secrets = com.example.data.math.MentalMathPdfGenerator.allSecrets
+    assertEquals(100, secrets.size)
+    secrets.forEachIndexed { index, secret ->
+      assertEquals(index + 1, secret.number)
+      assertTrue(secret.titleTa.isNotBlank())
+      assertTrue(secret.titleEn.isNotBlank())
+      assertTrue(secret.formulaTa.isNotBlank())
+      assertTrue(secret.explanationTa.isNotBlank())
+      assertTrue(secret.examples.isNotEmpty())
+      assertTrue(secret.practiceQuestions.isNotEmpty())
     }
   }
 
@@ -100,3 +115,4 @@ class ExampleUnitTest {
     assertTrue(optimized.contains("ஃபிளாஷ்"))
   }
 }
+
