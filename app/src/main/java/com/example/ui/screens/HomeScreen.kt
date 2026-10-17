@@ -21,20 +21,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -59,22 +54,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.ui.components.VoiceToneChipsRow
 import com.example.ui.components.VoiceToneDialog
-import com.example.ui.theme.AmberAccent
-import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.viewmodel.MainViewModel
 
 /**
- * Clean, centered launcher Home Screen strictly adhering to the user's layout specification:
- * 1) பேசலாம் AI சின்னம் (Pesalam AI Logo / Avatar Header)
+ * Compact, single-screen Home Screen (fits mobile screen without scrolling):
+ * 1) குழந்தைகளும் ரோபோவும் உள்ள தலைப்பு படம் (Kids & Robot Hero Banner)
  * 2) பாடப்புத்தக ஸ்கேனர் (Textbook Camera Scanner)
- * 3) மனக் கணக்கு (Mental Math)
- * 4) Spoken English via தமிழ்
+ * 3) மனக் கணக்கு (Mental Math 100 Secrets & Tables)
+ * 4) Spoken English via தமிழ் (Daily lessons)
  * 5) PDF புத்தக அடுக்கு (PDF Bookshelf)
  * 6) குரல் அலைவரிசை (Voice wave Live Call)
  */
@@ -97,8 +88,8 @@ fun HomeScreen(
     // Breathing pulse for voice wave item
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.97f,
-        targetValue = 1.03f,
+        initialValue = 0.98f,
+        targetValue = 1.02f,
         animationSpec = infiniteRepeatable(
             animation = tween(1200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -106,120 +97,115 @@ fun HomeScreen(
         label = "pulseScale"
     )
 
-    LazyColumn(
+    Column(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF0F172A))
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // ================= ITEM 1: பேசலாம் AI சின்னம் =================
-        item {
-            Card(
-                onClick = {
-                    viewModel.voiceManager.speakTamil(
-                        "வணக்கம்! நான் உங்கள் தனம் டீச்சர். பேசலாம் ஏஐ செயலிக்கு அன்புடன் வரவேற்கிறேன். கீழே உள்ள பட்டியலில் நீங்கள் விரும்பியதைத் தேர்ந்தெடுக்கலாம்!"
-                    )
-                },
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1E293B)
-                ),
-                border = BorderStroke(1.5.dp, Color(0xFF38BDF8).copy(alpha = 0.4f)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        // ================= ITEM 1: குழந்தைகள் & ரோபோ கற்றல் தலைப்பு =================
+        Card(
+            onClick = {
+                viewModel.voiceManager.speakTamil(
+                    "வணக்கம்! பேசலாம் ஏஐ செயலிக்கு அன்புடன் வரவேற்கிறேன். கீழே உள்ள பட்டியலில் நீங்கள் விரும்பியதைத் தேர்ந்தெடுக்கலாம்!"
+                )
+            },
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            border = BorderStroke(1.2.dp, Color(0xFF38BDF8).copy(alpha = 0.45f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("item_pesalam_ai_logo")
+        ) {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("item_pesalam_ai_logo")
+                    .height(130.dp)
             ) {
-                Column(
+                // Kids & Robot Hero Image (replaces the lady image)
+                Image(
+                    painter = painterResource(id = R.drawable.img_kids_robo_learn),
+                    contentDescription = "குழந்தைகள் மற்றும் ரோபோ கற்றல்",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // Dark gradient overlay for text readability
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Logo Avatar
-                    Box(
-                        modifier = Modifier
-                            .size(86.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.radialGradient(
-                                    listOf(Color(0xFF38BDF8).copy(alpha = 0.35f), Color(0xFF1E293B))
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF0F172A).copy(alpha = 0.35f),
+                                    Color(0xFF0F172A).copy(alpha = 0.88f)
                                 )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_pesalam_avatar),
-                            contentDescription = "பேசலாம் AI சின்னம்",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(78.dp)
-                                .clip(CircleShape)
+                            )
                         )
-                    }
+                )
 
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Surface(
-                        color = Color(0xFF4338CA),
-                        shape = RoundedCornerShape(12.dp)
+                // Header content on top of image
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Bottom
                     ) {
+                        Surface(
+                            color = Color(0xFF4338CA).copy(alpha = 0.9f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "பேசலாம் AI • Pesalam AI",
+                                color = Color(0xFFFDE68A),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
                         Text(
-                            text = "பேசலாம் AI சின்னம்",
-                            color = Color(0xFFFDE68A),
-                            fontSize = 13.sp,
+                            text = "தமிழ் வழி சுலப ஆங்கிலம் & கணிதம்",
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
+                            color = Color.White,
+                            fontSize = 14.sp
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "பேசலாம் AI • Pesalam AI",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
-                    )
-
-                    Text(
-                        text = "சுபி (9 வயது) & தனம் டீச்சர் • தமிழ் வழி கல்வி வழிகாட்டி",
-                        fontSize = 12.5.sp,
-                        color = Color(0xFF94A3B8),
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Voice Tone Selector compact trigger
+                    // Compact Voice Tone Selector Chip
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFF0F172A),
-                        border = BorderStroke(1.dp, Color(0xFF334155)),
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFF0F172A).copy(alpha = 0.92f),
+                        border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.6f)),
                         modifier = Modifier
                             .clickable { showVoiceToneDialog = true }
-                            .padding(horizontal = 4.dp)
+                            .padding(bottom = 2.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = selectedVoiceTone.emoji, fontSize = 14.sp)
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = selectedVoiceTone.emoji, fontSize = 13.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "குரல்: ${selectedVoiceTone.titleTa} (${selectedVoiceTone.titleEn})",
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                text = selectedVoiceTone.titleTa,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
                                 color = Color(0xFF38BDF8)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "▼", fontSize = 9.sp, color = Color(0xFF94A3B8))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "▼", fontSize = 8.sp, color = Color(0xFF94A3B8))
                         }
                     }
                 }
@@ -227,86 +213,76 @@ fun HomeScreen(
         }
 
         // ================= ITEM 2: பாடப்புத்தக ஸ்கேனர் =================
-        item {
-            HomeNavPill(
-                title = "பாடப்புத்தக ஸ்கேனர்",
-                subtitle = "புத்தக பக்கங்களை படம் பிடித்து நேரடி சந்தேகம் தீர்க்க",
-                tag = "CAMERA AI",
-                icon = Icons.Default.CameraAlt,
-                accentColor = Color(0xFFEC4899),
-                containerColor = Color(0xFF1E293B),
-                testTag = "item_textbook_scanner",
-                onClick = {
-                    viewModel.requestOpenCameraSheet()
-                    onNavigateToBot()
-                }
-            )
-        }
+        HomeNavPill(
+            title = "பாடப்புத்தக ஸ்கேனர்",
+            subtitle = "புத்தக பக்கங்களை படம் பிடித்து நேரடி சந்தேகம் தீர்க்க",
+            tag = "CAMERA AI",
+            icon = Icons.Default.CameraAlt,
+            accentColor = Color(0xFFEC4899),
+            containerColor = Color(0xFF1E293B),
+            testTag = "item_textbook_scanner",
+            modifier = Modifier.weight(1f, fill = false),
+            onClick = {
+                viewModel.requestOpenCameraSheet()
+                onNavigateToBot()
+            }
+        )
 
         // ================= ITEM 3: மனக் கணக்கு (Mental Math) =================
-        item {
-            HomeNavPill(
-                title = "மனக் கணக்கு (Mental Math)",
-                subtitle = "1-7 ஆம் வகுப்பு மாணவர்களுக்கான 100 ரகசியங்கள், வாய்ப்பாடுகள் & பயிற்சி",
-                tag = "100 SECRETS",
-                icon = Icons.Default.Calculate,
-                accentColor = Color(0xFFF59E0B),
-                containerColor = Color(0xFF1E293B),
-                testTag = "item_mental_math",
-                onClick = onNavigateToMentalMath
-            )
-        }
+        HomeNavPill(
+            title = "மனக் கணக்கு (Mental Math)",
+            subtitle = "1-7 ஆம் வகுப்பு 100 ரகசியங்கள், 1-20 வாய்ப்பாடு & பயிற்சி",
+            tag = "100 SECRETS",
+            icon = Icons.Default.Calculate,
+            accentColor = Color(0xFFF59E0B),
+            containerColor = Color(0xFF1E293B),
+            testTag = "item_mental_math",
+            modifier = Modifier.weight(1f, fill = false),
+            onClick = onNavigateToMentalMath
+        )
 
         // ================= ITEM 4: Spoken English via தமிழ் =================
-        item {
-            HomeNavPill(
-                title = "Spoken English via தமிழ்",
-                subtitle = "அன்றாட தமிழ் வழி ஆங்கில உரையாடல், பாடங்கள் & உச்சரிப்பு",
-                tag = "DAILY LESSONS",
-                icon = Icons.AutoMirrored.Filled.MenuBook,
-                accentColor = Color(0xFF10B981),
-                containerColor = Color(0xFF1E293B),
-                testTag = "item_spoken_english",
-                onClick = onNavigateToLessons
-            )
-        }
+        HomeNavPill(
+            title = "Spoken English via தமிழ்",
+            subtitle = "அன்றாட தமிழ் வழி ஆங்கில உரையாடல், பாடங்கள் & உச்சரிப்பு",
+            tag = "DAILY LESSONS",
+            icon = Icons.AutoMirrored.Filled.MenuBook,
+            accentColor = Color(0xFF10B981),
+            containerColor = Color(0xFF1E293B),
+            testTag = "item_spoken_english",
+            modifier = Modifier.weight(1f, fill = false),
+            onClick = onNavigateToLessons
+        )
 
         // ================= ITEM 5: PDF புத்தக அடுக்கு =================
-        item {
-            HomeNavPill(
-                title = "PDF புத்தக அடுக்கு",
-                subtitle = "100 மனக்கணக்கு ரகசியங்கள், 1-20 வாய்ப்பாடுகள் & அனைத்து PDF புத்தகங்கள்",
-                tag = "PDF E-BOOKS",
-                icon = Icons.Default.PictureAsPdf,
-                accentColor = Color(0xFF8B5CF6),
-                containerColor = Color(0xFF1E293B),
-                testTag = "item_pdf_bookshelf",
-                onClick = onNavigateToPdfBookshelf
-            )
-        }
+        HomeNavPill(
+            title = "PDF புத்தக அடுக்கு",
+            subtitle = "100 மனக்கணக்கு ரகசியங்கள், வாய்ப்பாடுகள் & E-Books",
+            tag = "PDF E-BOOKS",
+            icon = Icons.Default.PictureAsPdf,
+            accentColor = Color(0xFF8B5CF6),
+            containerColor = Color(0xFF1E293B),
+            testTag = "item_pdf_bookshelf",
+            modifier = Modifier.weight(1f, fill = false),
+            onClick = onNavigateToPdfBookshelf
+        )
 
         // ================= ITEM 6: குரல் அலைவரிசை (Voice wave) =================
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .scale(pulseScale)
-            ) {
-                HomeNavPill(
-                    title = "குரல் அலைவரிசை (Voice wave)",
-                    subtitle = "தனம் டீச்சர் & சுபியுடன் நேரடி அனிமேஷன் குரல் அலைவரிசை உரையாடல்",
-                    tag = "LIVE CALL",
-                    icon = Icons.Default.GraphicEq,
-                    accentColor = Color(0xFF06B6D4),
-                    containerColor = Color(0xFF1E1B4B),
-                    testTag = "item_voice_wave",
-                    onClick = onNavigateToCall
-                )
-            }
-        }
-
-        item {
-            Spacer(modifier = Modifier.height(30.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .scale(pulseScale)
+        ) {
+            HomeNavPill(
+                title = "குரல் அலைவரிசை (Voice wave)",
+                subtitle = "நேரடி அனிமேஷன் குரல் அலைவரிசை உரையாடல்",
+                tag = "LIVE CALL",
+                icon = Icons.Default.GraphicEq,
+                accentColor = Color(0xFF06B6D4),
+                containerColor = Color(0xFF1E1B4B),
+                testTag = "item_voice_wave",
+                onClick = onNavigateToCall
+            )
         }
     }
 
@@ -320,7 +296,7 @@ fun HomeScreen(
 }
 
 /**
- * Clean, centered pill button matching the user's sketch layout.
+ * Compact pill button matching single screen layout with no scrolling needed.
  */
 @Composable
 private fun HomeNavPill(
@@ -331,69 +307,70 @@ private fun HomeNavPill(
     accentColor: Color,
     containerColor: Color,
     testTag: String,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         border = BorderStroke(1.2.dp, accentColor.copy(alpha = 0.45f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        modifier = Modifier
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        modifier = modifier
             .fillMaxWidth()
             .testTag(testTag)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 14.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
                 shape = CircleShape,
                 color = accentColor.copy(alpha = 0.18f),
-                modifier = Modifier.size(46.dp)
+                modifier = Modifier.size(38.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = title,
                         tint = accentColor,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = title,
-                        fontSize = 15.sp,
+                        fontSize = 13.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Surface(
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(5.dp),
                         color = accentColor.copy(alpha = 0.25f)
                     ) {
                         Text(
                             text = tag,
-                            fontSize = 9.sp,
+                            fontSize = 8.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = accentColor,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
-                    fontSize = 11.5.sp,
+                    fontSize = 10.5.sp,
                     color = Color(0xFF94A3B8),
-                    lineHeight = 16.sp
+                    maxLines = 1
                 )
             }
 
@@ -401,7 +378,7 @@ private fun HomeNavPill(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = "Open $title",
                 tint = accentColor.copy(alpha = 0.8f),
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(16.dp)
             )
         }
     }
